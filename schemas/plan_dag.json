@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://indus-kernel.dev/schemas/plan_dag/v1",
+  "title": "PlanDAG",
+  "type": "object",
+  "required": ["plan_id", "goal", "dag", "estimated_cost_cents", "estimated_duration_s"],
+  "properties": {
+    "plan_id": {"type": "string", "format": "uuid"},
+    "goal": {"type": "string"},
+    "dag": {
+      "type": "object",
+      "required": ["nodes", "edges"],
+      "properties": {
+        "nodes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "kind"],
+            "properties": {
+              "id": {"type": "string"},
+              "kind": {"type": "string", "enum": ["llm", "tool", "memory_query", "code", "research", "human"]},
+              "description": {"type": "string"},
+              "depends_on": {"type": "array", "items": {"type": "string"}},
+              "parallel_with": {"type": "array", "items": {"type": "string"}},
+              "estimated_cost_cents": {"type": "integer"},
+              "estimated_duration_s": {"type": "integer"},
+              "required_capabilities": {"type": "array", "items": {"type": "string"}}
+            }
+          }
+        },
+        "edges": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["from", "to"],
+            "properties": {
+              "from": {"type": "string"},
+              "to": {"type": "string"},
+              "kind": {"type": "string", "enum": ["sequential", "data_flow"]}
+            }
+          }
+        }
+      }
+    },
+    "estimated_cost_cents": {"type": "integer"},
+    "estimated_duration_s": {"type": "integer"},
+    "verification": {
+      "type": "object",
+      "properties": {
+        "passed": {"type": "boolean"},
+        "reason": {"type": "string"},
+        "checked_at": {"type": "string", "format": "date-time"}
+      }
+    },
+    "plan_hash": {"type": "string"},
+    "created_at": {"type": "string", "format": "date-time"}
+  }
+}

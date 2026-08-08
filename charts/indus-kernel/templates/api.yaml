@@ -1,0 +1,78 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "indus-kernel.fullname" . }}-api
+  labels:
+    {{- include "indus-kernel.labels" . | nindent 4 }}
+    app.kubernetes.io/component: api
+spec:
+  replicas: {{ .Values.api.replicas }}
+  selector:
+    matchLabels:
+      {{- include "indus-kernel.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: api
+  template:
+    metadata:
+      labels:
+        {{- include "indus-kernel.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: api
+    spec:
+      containers:
+        - name: api
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8000
+              protocol: TCP
+            - name: metrics
+              containerPort: 9090
+              protocol: TCP
+          env:
+            - name: INDUS_ENVIRONMENT
+              value: production
+            - name: INDUS_DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "indus-kernel.fullname" . }}-secrets
+                  key: database-url
+            - name: INDUS_REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "indus-kernel.fullname" . }}-secrets
+                  key: redis-url
+            - name: INDUS_NATS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "indus-kernel.fullname" . }}-secrets
+                  key: nats-url
+            - name: INDUS_QDRANT_URL
+              value: http://{{ include "indus-kernel.fullname" . }}-qdrant:6333
+            - name: INDUS_NEO4J_URL
+              value: bolt://{{ include "indus-kernel.fullname" . }}-neo4j:7687
+            - name: INDUS_TEMPORAL_ADDRESS
+              value: {{ include "indus-kernel.fullname" . }}-temporal:7233
+            - name: INDUS_LITELLM_PROXY_URL
+              value: http://{{ include "indus-kernel.fullname" . }}-litellm:4000
+            - name: INDUS_OTEL_EXPORTER_OTLP_ENDPOINT
+              value: http://{{ include "indus-kernel.fullname" . }}-otel-collector:4317
+            - name: INDUS_LANGFUSE_HOST
+              value: http://{{ include "indus-kernel.fullname" . }}-langfuse:3000
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          resources:
+            {{- toYaml .Values.api.resources | nindent 12 }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

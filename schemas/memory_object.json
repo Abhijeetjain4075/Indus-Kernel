@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://indus-kernel.dev/schemas/memory_object/v1",
+  "title": "MemoryObject",
+  "type": "object",
+  "required": ["id", "content", "type", "scope", "created_at"],
+  "properties": {
+    "id": {"type": "string", "format": "uuid"},
+    "content": {"type": "string"},
+    "type": {
+      "type": "string",
+      "enum": ["episodic", "semantic", "procedural", "graph", "compaction", "reflection"]
+    },
+    "scope": {"type": "string", "enum": ["working", "short", "long"]},
+    "importance": {"type": "number", "minimum": 0, "maximum": 1},
+    "tags": {"type": "array", "items": {"type": "string"}},
+    "source": {"type": "string"},
+    "tenant_id": {"type": "string"},
+    "agent_id": {"type": "string"},
+    "user_id": {"type": "string"},
+    "created_at": {"type": "string", "format": "date-time"},
+    "last_accessed": {"type": "string", "format": "date-time"},
+    "access_count": {"type": "integer"},
+    "ttl": {"type": "string", "format": "date-time"},
+    "version": {"type": "integer"},
+    "embeddings_ref": {"type": "string", "description": "Ref into vector store"},
+    "graph_ref": {"type": "string", "description": "Ref into graph store"},
+    "lineage": {"type": "array", "items": {"type": "string", "format": "uuid"}}
+  }
+}

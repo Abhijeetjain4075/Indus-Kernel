@@ -1,0 +1,388 @@
+[project]
+name = "indus-kernel"
+version = "0.1.0"
+description = "The cognitive operating system that makes every AI system work together as one unified intelligence."
+readme = "README.md"
+license = { file = "LICENSE" }
+authors = [
+    { name = "Indus Kernel Contributors" }
+]
+requires-python = ">=3.12"
+keywords = ["ai", "agents", "llm", "orchestration", "operating-system", "kernel"]
+
+dependencies = [
+    # Web framework
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.34.0",
+    "pydantic>=2.10.0",
+    "pydantic-settings>=2.7.0",
+    "python-multipart>=0.0.20",
+    # Async
+    "anyio>=4.7.0",
+    "asyncio-throttle>=1.0.2",
+    "tenacity>=9.0.0",
+    # HTTP clients
+    "httpx>=0.28.0",
+    "aiohttp>=3.11.0",
+    # Auth
+    "python-jose[cryptography]>=3.3.0",
+    "authlib>=1.4.0",
+    "passlib[bcrypt]>=1.7.4",
+    # Validation
+    "jsonschema>=4.23.0",
+    # Templating
+    "jinja2>=3.1.5",
+    # Logging
+    "structlog>=24.4.0",
+    "rich>=13.9.0",
+    # Configuration
+    "PyYAML>=6.0.2",
+    "python-dotenv>=1.0.1",
+    # Secrets
+    "hvac>=2.3.0",
+    # Database
+    "sqlalchemy[asyncio]>=2.0.36",
+    "asyncpg>=0.30.0",
+    "alembic>=1.14.0",
+    "psycopg[binary,pool]>=3.2.3",
+    # Redis
+    "redis[hiredis]>=5.2.0",
+    # Vector DB
+    "qdrant-client>=1.13.0",
+    # Graph DB
+    "neo4j>=5.27.0",
+    # Event bus
+    "nats-py>=2.10.0",
+    # Object storage
+    "boto3>=1.35.0",
+    "minio>=7.2.0",
+    # Temporal
+    "temporalio>=1.6.0",
+    # LLM ecosystem
+    "litellm>=1.55.0",
+    "tiktoken>=0.8.0",
+    # LangGraph / LangChain core
+    "langgraph>=0.2.50",
+    "langgraph-checkpoint>=2.0.0",
+    "langgraph-checkpoint-postgres>=2.0.0",
+    "langchain-core>=0.3.0",
+    "langchain-community>=0.3.0",
+    # Memory
+    "mem0ai>=1.0.0",
+    # Web search
+    "duckduckgo-search>=6.3.0",
+    "tavily-python>=0.5.0",
+    "firecrawl-py>=2.0.0",
+    # DSPy
+    "dspy>=2.6.0",
+    # OpenTelemetry
+    "opentelemetry-api>=1.29.0",
+    "opentelemetry-sdk>=1.29.0",
+    "opentelemetry-exporter-otlp>=1.29.0",
+    "opentelemetry-instrumentation-fastapi>=0.50b0",
+    "opentelemetry-instrumentation-httpx>=0.50b0",
+    "opentelemetry-instrumentation-sqlalchemy>=0.50b0",
+    "opentelemetry-instrumentation-redis>=0.50b0",
+    # Prometheus
+    "prometheus-client>=0.21.1",
+    # Sandbox
+    "e2b-code-interpreter>=1.0.0",
+    # WebAssembly
+    "wasmtime>=31.0.0",
+    "extism>=1.0.0",
+    # MCP (Model Context Protocol)
+    "mcp>=1.0.0",
+    # A2A (Agent-to-Agent)
+    "a2a-sdk>=1.0.0",
+    # ID generation
+    "uuid7>=0.1.0",
+    # Time
+    "python-dateutil>=2.9.0",
+    # Testing
+    "pytest>=8.3.0",
+    "pytest-asyncio>=0.24.0",
+    "pytest-cov>=6.0.0",
+    "pytest-benchmark>=5.1.0",
+    "pytest-mock>=3.14.0",
+    "testcontainers>=4.8.0",
+    # Linting
+    "ruff>=0.8.0",
+    "mypy>=1.13.0",
+    "pre-commit>=4.0.1",
+    # Type stubs
+    "types-PyYAML",
+    "types-redis",
+    "types-python-dateutil",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ipython>=8.30.0",
+    "ipdb>=0.13.13",
+    "watchfiles>=0.24.0",
+    "debugpy>=1.8.0",
+    "ruff>=0.8.0",
+    "mypy>=1.13.0",
+    "pre-commit>=4.0.1",
+]
+docs = [
+    "mkdocs>=1.6.0",
+    "mkdocs-material>=9.5.0",
+    "mkdocstrings[python]>=0.26.0",
+    "mike>=2.1.0",
+]
+test = [
+    "pytest>=8.3.0",
+    "pytest-asyncio>=0.24.0",
+    "pytest-cov>=6.0.0",
+    "pytest-benchmark>=5.1.0",
+    "pytest-mock>=3.14.0",
+    "testcontainers>=4.8.0",
+    "hypothesis>=6.122.0",
+    "locust>=2.32.0",
+]
+finetune = [
+    "unsloth>=2025.2.0",
+    "llamafactory>=0.9.4",
+    "trl>=0.15.0",
+    "axolotl>=0.9.0",
+    "peft>=0.13.0",
+    "transformers>=4.47.0",
+    "datasets>=3.2.0",
+    "accelerate>=1.1.0",
+    "bitsandbytes>=0.45.0",
+]
+all = [
+    "indus-kernel[dev,docs,test,finetune]",
+]
+
+[project.scripts]
+ik-kernel = "ik_kernel.cli:main"
+ik = "ik_kernel.cli:main"
+
+[project.urls]
+Homepage = "https://indus-kernel.dev"
+Repository = "https://github.com/indus-kernel/indus-kernel"
+Documentation = "https://docs.indus-kernel.dev"
+Issues = "https://github.com/indus-kernel/indus-kernel/issues"
+
+# ============================================================================
+# Build system
+# ============================================================================
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["packages/*"]
+
+# ============================================================================
+# uv workspace
+# ============================================================================
+[tool.uv.workspace]
+members = [
+    "packages/ik_kernel",
+    "packages/ik_memory",
+    "packages/ik_reasoning",
+    "packages/ik_planning",
+    "packages/ik_router",
+    "packages/ik_tools",
+    "packages/ik_agents",
+    "packages/ik_retrieval",
+    "packages/ik_coding",
+    "packages/ik_research",
+    "packages/ik_workflow",
+    "packages/ik_automation",
+    "packages/ik_api",
+    "packages/ik_security",
+    "packages/ik_telemetry",
+    "packages/ik_config",
+    "packages/ik_registry",
+    "packages/ik_context",
+    "packages/ik_eval",
+    "packages/ik_improvement",
+    "packages/ik_distributed",
+    "packages/ik_memory_os",
+    "packages/ik_eventbus",
+    "packages/ik_state",
+    "packages/ik_sandbox",
+    "packages/ik_protocols",
+    "packages/ik_ttc",
+    "packages/ik_gepa",
+    "packages/ik_distill",
+    "packages/ik_wasm",
+    "packages/ik_sdk",
+]
+
+[tool.uv.sources]
+ik_kernel = { workspace = true }
+ik_memory = { workspace = true }
+ik_reasoning = { workspace = true }
+ik_planning = { workspace = true }
+ik_router = { workspace = true }
+ik_tools = { workspace = true }
+ik_agents = { workspace = true }
+ik_retrieval = { workspace = true }
+ik_coding = { workspace = true }
+ik_research = { workspace = true }
+ik_workflow = { workspace = true }
+ik_automation = { workspace = true }
+ik_api = { workspace = true }
+ik_security = { workspace = true }
+ik_telemetry = { workspace = true }
+ik_config = { workspace = true }
+ik_registry = { workspace = true }
+ik_context = { workspace = true }
+ik_eval = { workspace = true }
+ik_improvement = { workspace = true }
+ik_distributed = { workspace = true }
+ik_memory_os = { workspace = true }
+ik_eventbus = { workspace = true }
+ik_state = { workspace = true }
+ik_sandbox = { workspace = true }
+ik_protocols = { workspace = true }
+ik_ttc = { workspace = true }
+ik_gepa = { workspace = true }
+ik_distill = { workspace = true }
+ik_wasm = { workspace = true }
+ik_sdk = { workspace = true }
+
+# ============================================================================
+# Tooling configuration
+# ============================================================================
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = ["**/migrations/**", "**/node_modules/**", "**/.venv/**"]
+
+[tool.ruff.lint]
+select = [
+    "E",  # pycodestyle
+    "F",  # pyflakes
+    "W",  # pycodestyle warnings
+    "I",  # isort
+    "N",  # pep8-naming
+    "UP", # pyupgrade
+    "B",  # flake8-bugbear
+    "C4", # flake8-comprehensions
+    "SIM",# flake8-simplify
+    "PTH",# flake8-use-pathlib
+    "RET",# flake8-return
+    "ASYNC",# flake8-async
+    "S",  # flake8-bandit
+    "RUF",# ruff-specific
+]
+ignore = [
+    "E501",  # line-too-long
+    "B008",  # function-call-in-default-argument
+    "S101",  # assert
+    "S104",  # hardcoded-bind-all-interfaces
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["S", "B011", "N802", "N803"]
+"**/__init__.py" = ["F401"]
+"**/migrations/*.py" = ["N999"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["ik_"]
+combine-as-imports = true
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+ignore_missing_imports = true
+exclude = ["**/migrations/**", "**/tests/**", "**/node_modules/**"]
+plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = ["litellm.*", "mem0.*", "e2b_code_interpreter.*", "mcp.*", "a2a_sdk.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "-ra",
+    "--strict-markers",
+    "--strict-config",
+    "--showlocals",
+    "--tb=short",
+]
+markers = [
+    "unit: Unit tests (fast, no external services)",
+    "integration: Integration tests (require services)",
+    "e2e: End-to-end tests (full system)",
+    "chaos: Chaos/failure tests",
+    "benchmark: Performance benchmarks",
+    "regression: Regression tests",
+    "slow: Slow tests (>10s)",
+    "gpu: Tests requiring GPU",
+    "network: Tests requiring network access",
+]
+filterwarnings = [
+    "ignore::DeprecationWarning:moto",
+    "ignore::DeprecationWarning:botocore",
+    "ignore::DeprecationWarning:starlette",
+    "ignore::PendingDeprecationWarning",
+    "ignore::DeprecationWarning",
+]
+
+[tool.coverage.run]
+source = ["packages"]
+omit = [
+    "*/tests/*",
+    "*/__init__.py",
+    "*/migrations/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "pass",
+    "except ImportError:",
+]
+precision = 2
+show_missing = true
+skip_covered = false
+fail_under = 80
+
+# ============================================================================
+# Hatch envs
+# ============================================================================
+[tool.hatch.envs.default]
+features = ["all"]
+
+[tool.hatch.envs.test]
+features = ["test", "dev"]
+dependencies = [
+    "pytest>=8.3.0",
+    "pytest-asyncio>=0.24.0",
+    "pytest-cov>=6.0.0",
+    "testcontainers>=4.8.0",
+]
+[tool.hatch.envs.test.scripts]
+test = "pytest {args:tests}"
+test-cov = "pytest --cov=packages --cov-report=html --cov-report=term {args:tests}"
+
+[tool.hatch.envs.lint]
+features = ["dev"]
+[tool.hatch.envs.lint.scripts]
+lint = "ruff check packages apps"
+format = "ruff format packages apps"
+typecheck = "mypy packages"
+all = ["lint", "format", "typecheck"]

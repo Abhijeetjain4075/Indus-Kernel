@@ -1,0 +1,44 @@
+syntax = "proto3";
+
+package indus.kernel.v1;
+
+import "common.proto";
+
+// AgentMessage — the kernel's inter-agent message format.
+message AgentMessage {
+  string message_id = 1;
+  string from_agent = 2;       // "agent-id" or "orchestrator"
+  string to_agent = 3;         // "agent-id" or "broadcast"
+  AgentMessageKind kind = 4;
+  bytes payload = 5;           // JSON-encoded payload
+  string in_reply_to = 6;      // optional
+  string thread_id = 7;
+  float relevance_score = 8;   // 0-1
+  TraceContext trace_context = 9;
+  int32 ttl_s = 10;
+  int64 sent_at_unix_ms = 11;
+}
+
+enum AgentMessageKind {
+  AGENT_MESSAGE_KIND_UNSPECIFIED = 0;
+  TASK = 1;
+  THOUGHT = 2;
+  TOOL_CALL = 3;
+  TOOL_RESULT = 4;
+  MEMORY_QUERY = 5;
+  MEMORY_WRITE = 6;
+  REFLECTION = 7;
+  VOTE = 8;
+  REQUEST_HELP = 9;
+  RESPOND_HELP = 10;
+  SHUTDOWN = 11;
+}
+
+// AgentSpec — describes an agent in the multi-agent orchestrator.
+message AgentSpec {
+  string role = 1;
+  string model = 2;
+  repeated string tools = 3;
+  string system_prompt_ref = 4;
+  repeated string capabilities = 5;
+}

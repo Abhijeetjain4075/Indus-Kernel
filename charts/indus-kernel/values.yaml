@@ -1,0 +1,108 @@
+# Default values for indus-kernel.
+# Override per environment (values-dev.yaml, values-prod.yaml).
+
+image:
+  repository: indus-kernel/api
+  tag: latest
+  pullPolicy: IfNotPresent
+
+imageWorker:
+  repository: indus-kernel/worker
+  tag: latest
+  pullPolicy: IfNotPresent
+
+# Number of API replicas
+api:
+  replicas: 3
+  resources:
+    requests: { cpu: "1", memory: "2Gi" }
+    limits: { cpu: "4", memory: "8Gi" }
+  autoscaling:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 20
+    targetCPUUtilizationPercentage: 70
+
+# Number of worker replicas (Temporal + agent)
+worker:
+  replicas: 5
+  resources:
+    requests: { cpu: "2", memory: "4Gi" }
+    limits: { cpu: "8", memory: "16Gi" }
+
+# Stateful services
+postgres:
+  enabled: true
+  size: 100Gi
+  storageClass: fast-ssd
+  replicas: 3
+
+qdrant:
+  enabled: true
+  size: 50Gi
+  shards: 3
+  replicas: 2
+
+neo4j:
+  enabled: true
+  mode: causal-cluster
+  cores: 3
+  readReplicas: 2
+  size: 50Gi
+
+redis:
+  enabled: true
+  size: 20Gi
+  mode: cluster
+
+nats:
+  enabled: true
+  replicas: 3
+  size: 50Gi
+
+temporal:
+  enabled: true
+  namespace: indus
+  historyShards: 512
+
+# Observability
+otelCollector:
+  enabled: true
+  exporters: [otlp, prometheus]
+
+prometheus:
+  enabled: true
+  size: 50Gi
+  retention: 30d
+
+grafana:
+  enabled: true
+  adminPassword: indus
+
+langfuse:
+  enabled: true
+
+# Secrets (override with sealed-secrets / external-secrets in production)
+secrets:
+  # LLM provider keys
+  openaiApiKey: ""    # set via env OPENAI_API_KEY
+  anthropicApiKey: "" # set via env ANTHROPIC_API_KEY
+  # Vault
+  vaultAddr: ""       # set via env VAULT_ADDR
+  vaultToken: ""      # set via env VAULT_TOKEN
+  # LiteLLM
+  litellmMasterKey: "" # set via env LITELLM_MASTER_KEY
+  # E2B
+  e2bApiKey: ""        # set via env E2B_API_KEY
+
+# Ingress
+ingress:
+  enabled: false
+  className: nginx
+  annotations: {}
+  hosts:
+    - host: indus.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []

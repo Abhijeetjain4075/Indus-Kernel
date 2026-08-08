@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://indus-kernel.dev/schemas/automation_def/v1",
+  "title": "AutomationDefinition",
+  "type": "object",
+  "required": ["name", "trigger", "workflow"],
+  "properties": {
+    "name": {"type": "string"},
+    "trigger": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["type", "cron"],
+          "properties": {
+            "type": {"const": "cron"},
+            "cron": {"type": "string", "description": "Cron expression"}
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "event"],
+          "properties": {
+            "type": {"const": "event"},
+            "event": {"type": "string", "description": "Event subject, e.g. 'indus.llm.budget_exceeded'"}
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "url", "secret"],
+          "properties": {
+            "type": {"const": "webhook"},
+            "url": {"type": "string", "format": "uri"},
+            "secret": {"type": "string", "description": "HMAC secret"}
+          }
+        }
+      ]
+    },
+    "workflow": {"type": "string", "description": "Workflow name to invoke"},
+    "input": {"type": "object"},
+    "constraints": {
+      "type": "object",
+      "properties": {
+        "max_cost_cents": {"type": "integer"},
+        "max_duration_s": {"type": "integer"}
+      }
+    },
+    "enabled": {"type": "boolean", "default": true}
+  }
+}

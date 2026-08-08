@@ -1,0 +1,14 @@
+[project]
+name = "ik_ttc"
+version = "0.1.0"
+description = "Test-Time Compute Engine — parallel sampling, voting, GENCLUSTER, budget forcing"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+authors = [{ name = "Indus Kernel Contributors" }]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["ik_ttc"]

@@ -1,0 +1,292 @@
+# Indus Kernel — local development stack.
+#
+# Usage:
+#   docker compose up -d          # start everything
+#   docker compose ps             # check status
+#   docker compose logs -f        # tail logs
+#   docker compose down           # stop everything
+#   docker compose down -v        # stop + delete volumes (DATA LOSS)
+#
+# In M0 (skeleton) only Postgres, Redis, and NATS are strictly needed.
+# The rest come online as their respective milestones ship (Qdrant M1,
+# Neo4j M1, Temporal M3, E2B is managed not self-hosted, Langfuse M4).
+
+name: indus-kernel
+
+services:
+  # ==========================================================================
+  # Postgres — primary transactional store
+  # ==========================================================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: indus-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: indus
+      POSTGRES_PASSWORD: indus
+      POSTGRES_DB: indus
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./db/migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U indus -d indus"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ==========================================================================
+  # Redis — cache, working memory, rate limit, A/B state
+  # ==========================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: indus-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "512mb", "--maxmemory-policy", "allkeys-lru"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ==========================================================================
+  # NATS JetStream — event bus (durable streams + KV)
+  # ==========================================================================
+  nats:
+    image: nats:2.11-alpine
+    container_name: indus-nats
+    restart: unless-stopped
+    command: ["nats-server", "-js", "-sd", "/data", "-m", "8222"]
+    ports:
+      - "4222:4222"   # client
+      - "8222:8222"   # monitoring
+      - "6222:6222"   # cluster
+    volumes:
+      - nats_data:/data
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8222/healthz"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ==========================================================================
+  # Qdrant — vector memory + retrieval (M1+)
+  # ==========================================================================
+  qdrant:
+    image: qdrant/qdrant:v1.13.0
+    container_name: indus-qdrant
+    restart: unless-stopped
+    environment:
+      QDRANT__SERVICE__GRPC_PORT: 6334
+    ports:
+      - "6333:6333"   # HTTP
+      - "6334:6334"   # gRPC
+    volumes:
+      - qdrant_data:/qdrant/storage
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:6333/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ==========================================================================
+  # Neo4j — graph memory (M1+)
+  # ==========================================================================
+  neo4j:
+    image: neo4j:5.27-community
+    container_name: indus-neo4j
+    restart: unless-stopped
+    environment:
+      NEO4J_AUTH: neo4j/indus
+      NEO4J_PLUGINS: '["apoc"]'
+      NEO4J_dbms_security_procedures_unrestricted: "apoc.*"
+    ports:
+      - "7474:7474"   # HTTP
+      - "7687:7687"   # Bolt
+    volumes:
+      - neo4j_data:/data
+      - ./db/cypher:/var/lib/neo4j/import:ro
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:7474"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # ==========================================================================
+  # Temporal — durable workflow execution (M3+)
+  # ==========================================================================
+  temporal:
+    image: temporalio/auto-setup:1.4
+    container_name: indus-temporal
+    restart: unless-stopped
+    environment:
+      DB: sqlite
+      SQLITE_PRAGMA: "_journal_mode=WAL"
+    ports:
+      - "7233:7233"   # gRPC
+    volumes:
+      - temporal_data:/etc/temporal
+    healthcheck:
+      test: ["CMD", "temporal", "operator", "namespace", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    depends_on:
+      - postgres
+
+  temporal-ui:
+    image: temporalio/ui:2.30
+    container_name: indus-temporal-ui
+    restart: unless-stopped
+    environment:
+      TEMPORAL_ADDRESS: temporal:7233
+    ports:
+      - "8080:8080"
+    depends_on:
+      - temporal
+
+  # ==========================================================================
+  # LiteLLM Proxy — LLM router (M1+)
+  # ==========================================================================
+  litellm:
+    image: ghcr.io/berriai/litellm:main-stable
+    container_name: indus-litellm
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: "postgresql://indus:indus@postgres:5432/indus"
+    ports:
+      - "4000:4000"
+    volumes:
+      - ./docker/litellm_config.yaml:/app/config.yaml:ro
+    command: ["--config", "/app/config.yaml", "--port", "4000", "--num_workers", "4"]
+    depends_on:
+      - postgres
+
+  # ==========================================================================
+  # Langfuse — observability UI (M4+)
+  # ==========================================================================
+  langfuse:
+    image: langfuse/langfuse:3
+    container_name: indus-langfuse
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: "postgresql://indus:indus@postgres:5432/indus"
+      NEXTAUTH_URL: "http://localhost:3000"
+      NEXTAUTH_SECRET: "indus-dev-secret-change-in-prod"
+      SALT: "indus-dev-salt-change-in-prod"
+    ports:
+      - "3000:3000"
+    depends_on:
+      - postgres
+
+  # ==========================================================================
+  # OTel Collector — vendor-neutral telemetry pipeline (M4+)
+  # ==========================================================================
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.114.0
+    container_name: indus-otel-collector
+    restart: unless-stopped
+    command: ["--config=/etc/otel/config.yaml"]
+    volumes:
+      - ./docker/otel-collector.yaml:/etc/otel/config.yaml:ro
+    ports:
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP
+
+  # ==========================================================================
+  # Prometheus — metrics scraper (M4+)
+  # ==========================================================================
+  prometheus:
+    image: prom/prometheus:v2.55.0
+    container_name: indus-prometheus
+    restart: unless-stopped
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+    volumes:
+      - ./docker/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "9091:9090"
+
+  # ==========================================================================
+  # Grafana — dashboards (M4+)
+  # ==========================================================================
+  grafana:
+    image: grafana/grafana:11.3.0
+    container_name: indus-grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: indus
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - ./docker/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./docker/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "3001:3000"
+    depends_on:
+      - prometheus
+
+  # ==========================================================================
+  # Jaeger — distributed tracing UI (M4+)
+  # ==========================================================================
+  jaeger:
+    image: jaegertracing/all-in-one:1.62
+    container_name: indus-jaeger
+    restart: unless-stopped
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    ports:
+      - "16686:16686" # UI
+      - "14250:14250" # gRPC
+      - "14268:14268" # HTTP
+
+  # ==========================================================================
+  # MinIO — S3-compatible object storage (for S3 artifacts)
+  # ==========================================================================
+  minio:
+    image: minio/minio:RELEASE.2024-12-18
+    container_name: indus-minio
+    restart: unless-stopped
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: indus
+      MINIO_ROOT_PASSWORD: indus-secret
+    ports:
+      - "9000:9000"   # API
+      - "9001:9001"   # Console
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+# ============================================================================
+# Volumes
+# ============================================================================
+volumes:
+  postgres_data:
+  redis_data:
+  nats_data:
+  qdrant_data:
+  neo4j_data:
+  temporal_data:
+  prometheus_data:
+  grafana_data:
+  minio_data:
+
+# ============================================================================
+# Networks
+# ============================================================================
+networks:
+  default:
+    name: indus-network
+    driver: bridge

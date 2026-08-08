@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://indus-kernel.dev/schemas/tool_definition/v1",
+  "title": "ToolDefinition",
+  "type": "object",
+  "required": ["name", "description", "input_schema"],
+  "properties": {
+    "name": {"type": "string"},
+    "version": {"type": "string"},
+    "description": {"type": "string"},
+    "input_schema": {"type": "object"},
+    "output_schema": {"type": "object"},
+    "capabilities": {
+      "type": "array",
+      "items": {"type": "string"},
+      "description": "e.g. 'network.outbound', 'fs.read', 'fs.write'"
+    },
+    "sandbox": {
+      "type": "string",
+      "enum": ["wasm", "docker", "gvisor", "host", "e2b"]
+    },
+    "cost_hint_cents": {"type": "integer"},
+    "rate_limit_per_min": {"type": "integer"},
+    "mcp_tool": {
+      "type": "object",
+      "description": "If this tool is exposed via MCP, the MCP tool metadata",
+      "properties": {
+        "server_uri": {"type": "string"},
+        "tool_name": {"type": "string"}
+      }
+    }
+  }
+}

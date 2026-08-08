@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://indus-kernel.dev/schemas/task/v1",
+  "title": "Task",
+  "type": "object",
+  "required": ["task_id", "goal", "tenant_id", "submitted_at"],
+  "properties": {
+    "task_id": {"type": "string", "format": "uuid"},
+    "goal": {"type": "string"},
+    "tenant_id": {"type": "string"},
+    "user_id": {"type": "string"},
+    "agents": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "role": {"type": "string"},
+          "model": {"type": "string"},
+          "tools": {"type": "array", "items": {"type": "string"}},
+          "system_prompt_ref": {"type": "string"},
+          "capabilities": {"type": "array", "items": {"type": "string"}}
+        }
+      }
+    },
+    "topology": {
+      "type": "string",
+      "enum": ["chain", "graph", "broadcast", "consensus", "graph_of_agents", "hello"]
+    },
+    "constraints": {
+      "type": "object",
+      "properties": {
+        "max_tokens": {"type": "integer"},
+        "max_cost_cents": {"type": "integer"},
+        "max_duration_s": {"type": "integer"},
+        "deadline": {"type": "string", "format": "date-time"},
+        "required_capabilities": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "memory_hints": {"type": "array", "items": {"type": "string"}},
+    "plan_strategy": {"type": "string", "enum": ["llm_compiler", "metagpt", "manual", "auto"]},
+    "reasoning_strategy": {"type": "string"},
+    "idempotency_key": {"type": "string"},
+    "submitted_at": {"type": "string", "format": "date-time"}
+  }
+}

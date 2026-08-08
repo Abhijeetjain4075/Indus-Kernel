@@ -1,0 +1,14 @@
+[project]
+name = "ik_reasoning"
+version = "0.1.0"
+description = "Reasoning Engine — 13+ strategies (CoT, ToT, GoT, Reflexion, LLM Compiler, etc.)"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+authors = [{ name = "Indus Kernel Contributors" }]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["ik_reasoning"]

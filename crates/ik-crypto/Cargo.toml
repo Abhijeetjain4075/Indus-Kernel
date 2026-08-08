@@ -1,0 +1,8 @@
+[package]
+name = "ik-crypto"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Indus Kernel — ik-crypto crate (Rust hot path)"
+
+[dependencies]

@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://indus-kernel.dev/schemas/plugin_manifest/v1",
+  "title": "PluginManifest",
+  "type": "object",
+  "required": ["name", "version", "type", "entry_point", "capabilities"],
+  "properties": {
+    "name": {"type": "string"},
+    "version": {"type": "string"},
+    "type": {"type": "string", "enum": ["wasm", "python", "oci"]},
+    "entry_point": {"type": "string", "description": "Path to .wasm file, python module, or OCI URI"},
+    "wit_world": {"type": "string", "description": "WASM Interface Type world definition"},
+    "capabilities": {
+      "type": "array",
+      "items": {"type": "string", "enum": ["network.outbound", "fs.read", "fs.write", "fs.read.path", "env.read", "time.read"]}
+    },
+    "config_schema": {"type": "object"},
+    "dependencies": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "signature": {
+      "type": "object",
+      "description": "Sigstore signature for signed plugins",
+      "properties": {
+        "algorithm": {"type": "string"},
+        "public_key": {"type": "string"},
+        "signature": {"type": "string"}
+      }
+    }
+  }
+}

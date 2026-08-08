@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://indus-kernel.dev/schemas/benchmark_result/v1",
+  "title": "BenchmarkResult",
+  "type": "object",
+  "required": ["suite", "target", "metrics", "cost_cents", "duration_s", "started_at"],
+  "properties": {
+    "suite": {"type": "string", "enum": ["helm", "lm-evaluation-harness", "swe-bench", "swe-bench-live", "agentbench", "gaia", "custom"]},
+    "target": {"type": "string"},
+    "target_version": {"type": "string"},
+    "metrics": {
+      "type": "object",
+      "additionalProperties": {"type": "number"}
+    },
+    "runs": {"type": "integer", "description": "Number of evaluation runs"},
+    "cost_cents": {"type": "integer"},
+    "duration_s": {"type": "integer"},
+    "started_at": {"type": "string", "format": "date-time"},
+    "completed_at": {"type": "string", "format": "date-time"}
+  }
+}

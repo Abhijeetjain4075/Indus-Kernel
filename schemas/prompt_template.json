@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://indus-kernel.dev/schemas/prompt_template/v1",
+  "title": "PromptTemplate",
+  "type": "object",
+  "required": ["id", "version", "template", "variables"],
+  "properties": {
+    "id": {"type": "string"},
+    "version": {"type": "integer"},
+    "template": {"type": "string", "description": "Jinja2 template"},
+    "variables": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "type"],
+        "properties": {
+          "name": {"type": "string"},
+          "type": {"type": "string"},
+          "required": {"type": "boolean"},
+          "default": {}
+        }
+      }
+    },
+    "strategy_binding": {"type": "string", "description": "If bound to a reasoning strategy"},
+    "ab_test": {
+      "type": "object",
+      "properties": {
+        "variant": {"type": "string", "enum": ["A", "B"]},
+        "traffic_pct": {"type": "integer", "minimum": 0, "maximum": 100}
+      }
+    },
+    "created_at": {"type": "string", "format": "date-time"},
+    "created_by": {"type": "string"}
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "globalDependencies": ["**/.env.*local", "tsconfig.json"],
+  "globalEnv": ["NODE_ENV", "DATABASE_URL", "REDIS_URL", "NATS_URL", "QDRANT_URL", "NEO4J_URL", "TEMPORAL_ADDRESS", "OTEL_EXPORTER_OTLP_ENDPOINT", "LITELLM_MASTER_KEY", "VAULT_ADDR", "VAULT_TOKEN"],
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**", ".next/**", "!.next/cache/**"]
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "lint": {
+      "dependsOn": ["^build"],
+      "outputs": []
+    },
+    "typecheck": {
+      "dependsOn": ["^build"],
+      "outputs": []
+    },
+    "test": {
+      "dependsOn": ["^build"],
+      "outputs": ["coverage/**"],
+      "env": ["CI"]
+    },
+    "clean": {
+      "cache": false,
+      "outputs": []
+    }
+  }
+}

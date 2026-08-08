@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://indus-kernel.dev/schemas/agent_card/v1",
+  "title": "AgentCard",
+  "description": "A2A v1.0 Agent Card, published at /.well-known/agent-card.json",
+  "type": "object",
+  "required": ["name", "description", "url", "version", "capabilities", "skills", "authentication"],
+  "properties": {
+    "name": {"type": "string"},
+    "description": {"type": "string"},
+    "url": {"type": "string", "format": "uri"},
+    "version": {"type": "string"},
+    "provider": {"type": "string"},
+    "documentation": {"type": "string", "format": "uri"},
+    "icon_url": {"type": "string", "format": "uri"},
+    "capabilities": {
+      "type": "object",
+      "properties": {
+        "streaming": {"type": "boolean"},
+        "push_notifications": {"type": "boolean"},
+        "multi_turn": {"type": "boolean"},
+        "stateful": {"type": "boolean"}
+      }
+    },
+    "skills": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "name"],
+        "properties": {
+          "id": {"type": "string"},
+          "name": {"type": "string"},
+          "description": {"type": "string"},
+          "tags": {"type": "array", "items": {"type": "string"}},
+          "examples": {"type": "array", "items": {"type": "string"}}
+        }
+      }
+    },
+    "authentication": {
+      "type": "object",
+      "properties": {
+        "schemes": {
+          "type": "array",
+          "items": {"type": "string", "enum": ["bearer", "oauth2", "api_key", "mtls", "none"]}
+        }
+      }
+    },
+    "default_input_modes": {"type": "array", "items": {"type": "string"}},
+    "default_output_modes": {"type": "array", "items": {"type": "string"}}
+  }
+}

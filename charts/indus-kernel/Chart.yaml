@@ -1,0 +1,23 @@
+apiVersion: v2
+name: indus-kernel
+description: |
+  Indus Kernel — the cognitive operating system that makes every AI system
+  work together as one unified intelligence. This chart deploys the full
+  production stack: API, workers, Temporal, observability.
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+home: https://indus-kernel.dev
+sources:
+  - https://github.com/indus-kernel/indus-kernel
+keywords:
+  - ai
+  - agents
+  - llm
+  - orchestration
+  - operating-system
+  - kernel
+maintainers:
+  - name: Indus Kernel Contributors
+    email: maintainers@indus-kernel.dev
+icon: https://indus-kernel.dev/icon.png

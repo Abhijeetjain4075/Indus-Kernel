@@ -1,0 +1,120 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+.venv/
+venv/
+env/
+.env
+.envrc
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+.hypothesis/
+
+# Mypy / linting
+.mypy_cache/
+.ruff_cache/
+.dmypy.json
+dmypy.json
+
+# uv
+.uv/
+uv.lock
+
+# Distribution
+target/
+*.whl
+*.tar.gz
+
+# Node
+node_modules/
+.turbo/
+.next/
+out/
+build/
+*.tsbuildinfo
+next-env.d.ts
+
+# Rust
+Cargo.lock
+**/*.rs.bk
+
+# Docker
+.docker/
+docker-compose.override.yml
+
+# Local data
+data/
+*.db
+*.sqlite
+*.sqlite3
+*.log
+logs/
+tmp/
+temp/
+
+# Secrets
+*.pem
+*.key
+secrets/
+.env.local
+.env.*.local
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# Temporal
+temporalite-data/
+
+# Generated
+*.generated.ts
+*.generated.py
+openapi.json
+
+# Coverage reports
+coverage/
+.coverage.*
+
+# Terraform / IaC
+.terraform/
+*.tfstate
+*.tfstate.backup
+
+# OS
+Thumbs.db

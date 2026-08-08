@@ -1,0 +1,8 @@
+[package]
+name = "ik-vector"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Indus Kernel — ik-vector crate (Rust hot path)"
+
+[dependencies]

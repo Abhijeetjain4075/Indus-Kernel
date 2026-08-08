@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://indus-kernel.dev/schemas/agent_message/v1",
+  "title": "AgentMessage",
+  "type": "object",
+  "required": ["message_id", "from", "to", "kind", "payload", "sent_at"],
+  "properties": {
+    "message_id": {"type": "string", "format": "uuid"},
+    "from": {"type": "string", "description": "Agent ID or 'orchestrator'"},
+    "to": {"type": "string", "description": "Agent ID or 'broadcast'"},
+    "kind": {
+      "type": "string",
+      "enum": [
+        "task", "thought", "tool_call", "tool_result",
+        "memory_query", "memory_write", "reflection", "vote",
+        "request_help", "respond_help", "shutdown"
+      ]
+    },
+    "payload": {"type": "object"},
+    "in_reply_to": {"type": "string", "format": "uuid"},
+    "thread_id": {"type": "string", "format": "uuid"},
+    "relevance_score": {"type": "number", "minimum": 0, "maximum": 1},
+    "trace_context": {"type": "object", "description": "W3C trace context"},
+    "ttl_s": {"type": "integer"},
+    "sent_at": {"type": "string", "format": "date-time"}
+  }
+}

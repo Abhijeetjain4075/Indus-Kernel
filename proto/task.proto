@@ -1,0 +1,69 @@
+syntax = "proto3";
+
+package indus.kernel.v1;
+
+import "common.proto";
+
+// Task — the kernel's unit of agent execution.
+message Task {
+  string task_id = 1;
+  string goal = 2;
+  string tenant_id = 3;
+  string user_id = 4;
+  repeated AgentSpec agents = 5;
+  Topology topology = 6;
+  TaskConstraints constraints = 7;
+  repeated string memory_hints = 8;
+  string plan_strategy = 9;
+  string reasoning_strategy = 10;
+  string idempotency_key = 11;
+  int64 submitted_at_unix_ms = 12;
+  map<string, string> metadata = 13;
+}
+
+enum Topology {
+  TOPOLOGY_UNSPECIFIED = 0;
+  CHAIN = 1;
+  GRAPH = 2;
+  BROADCAST = 3;
+  CONSENSUS = 4;
+  GRAPH_OF_AGENTS = 5;
+  HELLO = 6;
+}
+
+message TaskConstraints {
+  int32 max_tokens = 1;
+  int32 max_cost_cents = 2;
+  int32 max_duration_s = 3;
+  int64 deadline_unix_ms = 4;
+  repeated string required_capabilities = 5;
+}
+
+message AgentSpec {
+  string role = 1;
+  string model = 2;
+  repeated string tools = 3;
+  string system_prompt_ref = 4;
+  repeated string capabilities = 5;
+}
+
+message TaskResult {
+  string task_id = 1;
+  TaskStatus status = 2;
+  bytes result = 3;            // JSON-encoded
+  string error = 4;
+  int32 total_tokens = 5;
+  int32 total_cost_cents = 6;
+  int32 total_latency_ms = 7;
+  int64 started_at_unix_ms = 8;
+  int64 completed_at_unix_ms = 9;
+}
+
+enum TaskStatus {
+  TASK_STATUS_UNSPECIFIED = 0;
+  PENDING = 1;
+  RUNNING = 2;
+  COMPLETED = 3;
+  FAILED = 4;
+  CANCELLED = 5;
+}

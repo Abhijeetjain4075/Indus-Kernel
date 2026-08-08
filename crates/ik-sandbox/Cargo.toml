@@ -1,0 +1,8 @@
+[package]
+name = "ik-sandbox"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Indus Kernel — ik-sandbox crate (Rust hot path)"
+
+[dependencies]

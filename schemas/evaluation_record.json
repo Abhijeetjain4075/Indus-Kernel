@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://indus-kernel.dev/schemas/evaluation_record/v1",
+  "title": "EvaluationRecord",
+  "type": "object",
+  "required": ["eval_id", "kind", "target", "scores", "started_at"],
+  "properties": {
+    "eval_id": {"type": "string", "format": "uuid"},
+    "kind": {"type": "string", "enum": ["llm_judge", "regression", "agent_task"]},
+    "target": {"type": "string", "description": "System, model, or agent being evaluated"},
+    "target_version": {"type": "string"},
+    "dataset": {"type": "string"},
+    "scores": {
+      "type": "object",
+      "additionalProperties": {"type": "number"}
+    },
+    "per_item": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string"},
+          "input": {"type": "object"},
+          "output": {"type": "object"},
+          "score": {"type": "number"},
+          "feedback": {"type": "string"}
+        }
+      }
+    },
+    "pass_rate": {"type": "number", "minimum": 0, "maximum": 1},
+    "started_at": {"type": "string", "format": "date-time"},
+    "completed_at": {"type": "string", "format": "date-time"}
+  }
+}

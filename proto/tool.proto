@@ -1,0 +1,52 @@
+syntax = "proto3";
+
+package indus.kernel.v1;
+
+import "common.proto";
+
+// ToolDefinition — the kernel's tool representation.
+message ToolDefinition {
+  string id = 1;
+  string name = 2;
+  string version = 3;
+  string description = 4;
+  bytes input_schema = 5;       // JSON Schema
+  bytes output_schema = 6;      // JSON Schema
+  repeated string capabilities = 7;
+  Sandbox sandbox = 8;
+  int32 cost_hint_cents = 9;
+  int32 rate_limit_per_min = 10;
+  MCPMetadata mcp = 11;
+}
+
+enum Sandbox {
+  SANDBOX_UNSPECIFIED = 0;
+  WASM = 1;
+  DOCKER = 2;
+  GVISOR = 3;
+  HOST = 4;
+  E2B = 5;
+}
+
+message MCPMetadata {
+  string server_uri = 1;
+  string tool_name = 2;
+}
+
+message ToolCall {
+  string call_id = 1;
+  string tool_id = 2;
+  bytes args = 3;                // JSON
+  string caller_id = 4;
+  int32 timeout_s = 5;
+  string idempotency_key = 6;
+}
+
+message ToolResult {
+  string call_id = 1;
+  bytes output = 2;              // JSON
+  int32 latency_ms = 3;
+  int32 cost_cents = 4;
+  Sandbox sandbox_used = 5;
+  bool verified = 6;
+}

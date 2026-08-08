@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package indus.kernel.v1;
+
+import "common.proto";
+
+// Event — the kernel's event-bus message.
+message Event {
+  string event_id = 1;
+  string subject = 2;            // e.g. "indus.llm.completed"
+  bytes payload = 3;             // JSON
+  map<string, string> headers = 4;
+  TraceContext trace_context = 5;
+  int64 published_at_unix_ms = 6;
+}
