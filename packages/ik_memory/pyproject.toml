@@ -5,6 +5,20 @@ description = "Memory Engine — working, short-term, long-term, episodic, seman
 requires-python = ">=3.12"
 license = { text = "MIT" }
 authors = [{ name = "Indus Kernel Contributors" }]
+dependencies = [
+    "pydantic>=2.6.0",
+    "numpy>=1.26.0",
+    "sentence-transformers>=2.6.0",
+    "tiktoken>=0.7.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+    "mypy>=1.8",
+    "ruff>=0.3",
+]
 
 [build-system]
 requires = ["hatchling"]

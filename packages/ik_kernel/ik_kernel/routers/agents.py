@@ -91,7 +91,7 @@ async def start_agent_run(req: AgentRunRequest) -> AgentRunResponse:
     )
     _RUNS[run_id] = run
 
-    # Execute the hello-world agent
+    # Execute the hello-world agent (real LLM call)
     try:
         result = await run_hello_agent(goal=req.goal, run_id=run_id)
         run.status = "completed"
@@ -104,6 +104,13 @@ async def start_agent_run(req: AgentRunRequest) -> AgentRunResponse:
         run.status = "failed"
         run.error = str(e)
         run.completed_at = datetime.utcnow()
+        # ConfigurationError is a 503 (service unavailable) not 500
+        from ik_router.errors import ConfigurationError
+        if isinstance(e, ConfigurationError):
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=f"LLM provider not configured: {e}",
+            )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"agent run failed: {e}",

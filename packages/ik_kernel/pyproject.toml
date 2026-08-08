@@ -5,6 +5,27 @@ description = "Indus Kernel core — app factory, CLI, lifespan, dependency inje
 requires-python = ">=3.12"
 license = { text = "MIT" }
 authors = [{ name = "Indus Kernel Contributors" }]
+dependencies = [
+    "pydantic>=2.6.0",
+    "pydantic-settings>=2.2.0",
+    "fastapi>=0.110.0",
+    "uvicorn[standard]>=0.27.0",
+    "httpx>=0.27.0",
+    "structlog>=24.1.0",
+    "typer>=0.12.0",
+    "ik_router>=0.1.0",
+    "ik_memory>=0.1.0",
+    "ik_agents>=0.1.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+    "httpx>=0.27.0",
+    "mypy>=1.8",
+    "ruff>=0.3",
+]
 
 [build-system]
 requires = ["hatchling"]

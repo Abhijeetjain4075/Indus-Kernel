@@ -1,21 +1,22 @@
-"""End-to-end smoke test for the M0 hello-world agent.
+"""End-to-end smoke test for the Indus Kernel API.
 
-This is the canonical "does the kernel boot?" test. It must pass before M0
-is considered complete.
+This is the canonical "does the kernel boot?" test.
 
 Tests:
 1. Health endpoints (/healthz, /readyz, /version)
 2. OpenAPI schema generation (/openapi.json)
 3. Hello-world agent end-to-end (POST /api/v1/agents/runs)
+   - With an LLM API key: real LLM call; assert completion
+   - Without an API key: 503 ConfigurationError (NOT a demo greeting)
 4. Agent run retrieval (GET /api/v1/agents/runs/{run_id})
-5. Memory + Reasoning + other subsystems return their stub responses
+5. Subsystem endpoints (memory, reasoning, models) return real data
 
-The test uses FastAPI's `TestClient` (sync) so it doesn't require a running
-server. For the `hello` agent, no LLM API key or backing services are needed.
+The test uses FastAPI's `TestClient` (sync) so it doesn't require a running server.
 """
 
 from __future__ import annotations
 
+import os
 import time
 import uuid
 
@@ -34,6 +35,16 @@ def client() -> TestClient:
     return TestClient(app)
 
 
+def _has_llm_key() -> bool:
+    """Return True if any LLM provider key is configured."""
+    keys = [
+        "OPENAI_API_KEY", "ANTHROPIC_API_KEY", "GOOGLE_API_KEY", "AZURE_API_KEY",
+        "COHERE_API_KEY", "MISTRAL_API_KEY", "GROQ_API_KEY", "TOGETHER_API_KEY",
+        "FIREWORKS_API_KEY", "DEEPINFRA_API_KEY", "OPENROUTER_API_KEY", "LITELLM_API_KEY",
+    ]
+    return any(os.environ.get(k) for k in keys)
+
+
 # ============================================================================
 # 1. Health endpoints
 # ============================================================================
@@ -49,7 +60,6 @@ class TestHealth:
 
     def test_readyz_returns_200_in_dev(self, client: TestClient) -> None:
         r = client.get("/readyz")
-        # In M0, only process-level check; should be 200
         assert r.status_code == 200
         body = r.json()
         assert body["status"] == "ok"
@@ -75,7 +85,6 @@ class TestOpenAPI:
         schema = r.json()
         assert "openapi" in schema
         assert "paths" in schema
-        # Sanity check: key endpoints are present
         assert "/healthz" in schema["paths"]
         assert "/api/v1/agents/runs" in schema["paths"]
         assert "/api/v1/agents/runs/{run_id}" in schema["paths"]
@@ -87,43 +96,58 @@ class TestOpenAPI:
 
 
 # ============================================================================
-# 3. Hello-world agent end-to-end
+# 3. Hello-world agent end-to-end (REAL, not demo)
 # ============================================================================
 class TestHelloAgent:
-    def test_hello_agent_completes(self, client: TestClient) -> None:
-        """The canonical M0 happy-path: post a goal, get a greeting."""
+    def test_hello_agent_fails_loud_without_api_key(self, client: TestClient) -> None:
+        """Without an LLM API key, the agent must return 503 ConfigurationError.
+
+        The agent does NOT return a demo greeting or sample data.
+        """
+        if _has_llm_key():
+            pytest.skip("LLM key configured; this test is for the no-key path")
         r = client.post(
             "/api/v1/agents/runs",
             json={"goal": "Introduce Indus Kernel", "topology": "hello"},
         )
-        assert r.status_code == 201
+        assert r.status_code == 503, f"expected 503, got {r.status_code}: {r.text}"
+        body = r.json()
+        assert "API key" in body["detail"] or "configured" in body["detail"].lower()
+
+    def test_hello_agent_completes_with_real_llm(self, client: TestClient) -> None:
+        """With a real LLM API key, the agent should complete via a real call."""
+        if not _has_llm_key():
+            pytest.skip("no LLM key configured; this test requires one")
+        r = client.post(
+            "/api/v1/agents/runs",
+            json={"goal": "What is 2+2? Answer in one short sentence.", "topology": "hello"},
+        )
+        assert r.status_code == 201, f"got {r.status_code}: {r.text}"
         body = r.json()
         assert body["status"] == "completed"
         assert body["topology"] == "hello"
         assert "run_id" in body
-        assert "Hello from Indus Kernel" in body["result"]
-        assert body["total_latency_ms"] >= 0
-        # M0: no LLM call, so no tokens / cost
-        assert body["total_tokens"] == 0
-        assert body["total_cost_cents"] == 0
-        run_id = body["run_id"]
+        # Real LLM was called; result is from the model, not a hardcoded greeting
+        assert body["result"], "empty result from LLM"
+        assert body["total_tokens"] > 0, "real LLM call should record token usage"
 
     def test_hello_agent_run_retrievable(self, client: TestClient) -> None:
-        """After a run completes, GET it back."""
-        # Create a run
+        """After a run completes (or fails), GET it back."""
         r = client.post(
             "/api/v1/agents/runs",
             json={"goal": "Test retrieval", "topology": "hello"},
         )
-        assert r.status_code == 201
-        run_id = r.json()["run_id"]
+        # Either succeeds (LLM key set) or fails with 503 (no key) — both produce a run record
+        run_id = r.json().get("run_id")
+        if not run_id:
+            # 503 has no run_id; skip retrieval test
+            pytest.skip("no run_id in error response")
 
-        # Retrieve it
         r2 = client.get(f"/api/v1/agents/runs/{run_id}")
         assert r2.status_code == 200
         body = r2.json()
         assert body["run_id"] == run_id
-        assert body["status"] == "completed"
+        assert body["status"] in ("completed", "failed")
 
     def test_hello_agent_run_not_found(self, client: TestClient) -> None:
         """404 for unknown run_id."""
@@ -131,24 +155,13 @@ class TestHelloAgent:
         assert r.status_code == 404
 
     def test_other_topologies_return_501(self, client: TestClient) -> None:
-        """For M0, only 'hello' topology is supported; others return 501."""
+        """For M0/M1, only 'hello' topology is supported; others return 501."""
         for topology in ("chain", "graph", "broadcast", "consensus", "graph_of_agents"):
             r = client.post(
                 "/api/v1/agents/runs",
                 json={"goal": "Test", "topology": topology},
             )
-            assert r.status_code == 501, f"topology '{topology}' should be 501 in M0"
-
-    def test_hello_agent_latency_under_1s(self, client: TestClient) -> None:
-        """The hello agent must be fast (it's deterministic)."""
-        t0 = time.perf_counter()
-        r = client.post(
-            "/api/v1/agents/runs",
-            json={"goal": "Latency test", "topology": "hello"},
-        )
-        elapsed = time.perf_counter() - t0
-        assert r.status_code == 201
-        assert elapsed < 1.0, f"hello agent took {elapsed:.2f}s, expected < 1s"
+            assert r.status_code == 501, f"topology '{topology}' should be 501"
 
     def test_hello_agent_validation(self, client: TestClient) -> None:
         """Empty goal is rejected with 422."""
@@ -160,31 +173,34 @@ class TestHelloAgent:
 
 
 # ============================================================================
-# 4. Subsystem stub endpoints
+# 4. Subsystem endpoints (real data, not stubs)
 # ============================================================================
-class TestSubsystemStubs:
-    """All non-implemented subsystems should return informative stubs."""
+class TestSubsystems:
+    """Subsystem endpoints return real data, not placeholder stubs."""
 
-    def test_memory_endpoint_returns_stub(self, client: TestClient) -> None:
-        r = client.get("/api/v1/memory/objects")
+    def test_memory_endpoint_returns_real(self, client: TestClient) -> None:
+        r = client.get("/api/v1/memory/objects?user_id=test-user")
         assert r.status_code == 200
         body = r.json()
-        assert "note" in body
-        assert "M1" in body["note"]
+        # Real list of memories (may be empty)
+        assert "memories" in body
+        assert "count" in body
 
-    def test_reasoning_strategies_returns_stub(self, client: TestClient) -> None:
+    def test_reasoning_strategies_returns_real(self, client: TestClient) -> None:
         r = client.get("/api/v1/reasoning/strategies")
         assert r.status_code == 200
         body = r.json()
         assert "strategies" in body
-        assert all("available_in" in s for s in body["strategies"])
+        # In M2, returns real strategies
+        assert isinstance(body["strategies"], list)
 
-    def test_models_returns_list(self, client: TestClient) -> None:
+    def test_models_returns_real(self, client: TestClient) -> None:
         r = client.get("/api/v1/models")
         assert r.status_code == 200
         body = r.json()
         assert "models" in body
-        assert any(m["id"] == "gpt-4o-mini" for m in body["models"])
+        # Real list, not a single placeholder
+        assert len(body["models"]) > 0
 
 
 # ============================================================================
@@ -192,13 +208,11 @@ class TestSubsystemStubs:
 # ============================================================================
 class TestConfig:
     def test_settings_load(self) -> None:
-        # Clear the lru_cache to pick up current env (conftest sets INDUS_ENVIRONMENT=test)
         from ik_kernel.config import get_settings as _get_settings
         _get_settings.cache_clear()
         settings = _get_settings()
         assert settings.app_name == "indus-kernel"
         assert settings.app_version == __version__
-        # environment is set by conftest.py to "test"
         assert settings.environment in ("dev", "test")
         assert settings.api_port == 8000
 
