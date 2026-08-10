@@ -1,10 +1,17 @@
 [project]
 name = "ik_protocols"
 version = "0.1.0"
-description = "Protocol Gateway — MCP 2026-07-28 server+client, A2A v1.0 server+client"
+description = "Protocol layer — canonical AgentMessage + A2A v1.0 + MCP 2026-07-28 translation"
 requires-python = ">=3.12"
 license = { text = "MIT" }
 authors = [{ name = "Indus Kernel Contributors" }]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "mypy>=1.8",
+    "ruff>=0.3",
+]
 
 [build-system]
 requires = ["hatchling"]
