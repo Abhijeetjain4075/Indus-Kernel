@@ -10,6 +10,7 @@ dependencies = [
     "langgraph>=0.0.50",
     "ik_router>=0.1.0",
     "ik_memory>=0.1.0",
+    "ik_planning>=0.1.0",
 ]
 
 [project.optional-dependencies]

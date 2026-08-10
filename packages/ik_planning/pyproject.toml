@@ -1,10 +1,17 @@
 [project]
 name = "ik_planning"
 version = "0.1.0"
-description = "Planning Engine — goal decomposition, DAG construction, replanning, verification"
+description = "Planning primitives — typed Plan + PlanStep with cycle detection and topological ordering"
 requires-python = ">=3.12"
 license = { text = "MIT" }
 authors = [{ name = "Indus Kernel Contributors" }]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "mypy>=1.8",
+    "ruff>=0.3",
+]
 
 [build-system]
 requires = ["hatchling"]

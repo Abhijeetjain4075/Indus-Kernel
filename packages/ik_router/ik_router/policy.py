@@ -44,10 +44,24 @@ class PolicyEngine:
         self.candidates = candidates or self._default_candidates()
 
     def _default_candidates(self) -> list[ModelCandidate]:
-        """Default model candidates for the kernel."""
+        """Default model candidates for the kernel.
+
+        Model IDs are in LiteLLM canonical form: "provider/model-name".
+        This way they match the fallback chain entries exactly.
+        """
         return [
+            # Native Indus (local, free, always available when checkpoint installed)
             ModelCandidate(
-                model_id="gpt-4o-mini",
+                model_id="indus/indus-tiny",
+                provider="indus-local",
+                capabilities={"text"},
+                cost_per_1k_input_cents=0,
+                cost_per_1k_output_cents=0,
+                context_length=2048,
+                priority=1,  # lowest priority — only used when external is down or explicitly requested
+            ),
+            ModelCandidate(
+                model_id="openai/gpt-4o-mini",
                 provider="openai",
                 capabilities={"text", "json-mode", "tool-use", "vision"},
                 cost_per_1k_input_cents=15,
@@ -56,7 +70,7 @@ class PolicyEngine:
                 priority=10,
             ),
             ModelCandidate(
-                model_id="gpt-4o",
+                model_id="openai/gpt-4o",
                 provider="openai",
                 capabilities={"text", "json-mode", "tool-use", "vision"},
                 cost_per_1k_input_cents=250,
@@ -65,7 +79,7 @@ class PolicyEngine:
                 priority=5,
             ),
             ModelCandidate(
-                model_id="claude-3-5-sonnet",
+                model_id="anthropic/claude-3-5-sonnet",
                 provider="anthropic",
                 capabilities={"text", "json-mode", "tool-use", "vision"},
                 cost_per_1k_input_cents=300,
@@ -74,7 +88,7 @@ class PolicyEngine:
                 priority=3,
             ),
             ModelCandidate(
-                model_id="claude-3-haiku",
+                model_id="anthropic/claude-3-haiku",
                 provider="anthropic",
                 capabilities={"text", "json-mode", "tool-use"},
                 cost_per_1k_input_cents=25,

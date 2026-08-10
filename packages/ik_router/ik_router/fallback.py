@@ -25,9 +25,10 @@ class FallbackChain:
         "anthropic/claude-3-haiku",
         "openai/gpt-4o",
         "anthropic/claude-3-5-sonnet",
+        "indus/indus-tiny",  # native local model — last-resort fallback
     ]
 
-    def __init__(self, chain: list[str] | None = None, max_attempts: int = 3) -> None:
+    def __init__(self, chain: list[str] | None = None, max_attempts: int = 5) -> None:
         self.chain = chain or self.DEFAULT_CHAIN
         self.max_attempts = min(max_attempts, len(self.chain))
 

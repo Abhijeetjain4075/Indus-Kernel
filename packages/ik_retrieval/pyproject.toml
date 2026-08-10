@@ -1,10 +1,26 @@
 [project]
 name = "ik_retrieval"
 version = "0.1.0"
-description = "Retrieval Engine — RAG, hybrid search, re-ranking, 8 strategies"
+description = "Retrieval strategies — 8 real algorithms (RAG, BM25, Self-RAG, CRAG, GraphRAG, RAPTOR, HyDE, ColBERT)"
 requires-python = ">=3.12"
 license = { text = "MIT" }
 authors = [{ name = "Indus Kernel Contributors" }]
+dependencies = [
+    "pydantic>=2.6.0",
+    "numpy>=1.26.0",
+    "tiktoken>=0.7.0",
+    "sentence-transformers>=2.6.0",
+    "ik_router>=0.1.0",
+    "ik_memory>=0.1.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+    "mypy>=1.8",
+    "ruff>=0.3",
+]
 
 [build-system]
 requires = ["hatchling"]

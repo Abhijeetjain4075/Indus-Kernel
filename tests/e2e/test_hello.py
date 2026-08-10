@@ -45,6 +45,17 @@ def _has_llm_key() -> bool:
     return any(os.environ.get(k) for k in keys)
 
 
+def _has_native_checkpoint() -> bool:
+    from pathlib import Path
+    return Path(
+        "packages/ik_indus_llm/ik_indus_llm/artifacts/checkpoints/pretrain/indus_tiny_v0.3.0.pt"
+    ).is_file()
+
+
+def _has_any_backend() -> bool:
+    return _has_llm_key() or _has_native_checkpoint()
+
+
 # ============================================================================
 # 1. Health endpoints
 # ============================================================================
@@ -99,25 +110,25 @@ class TestOpenAPI:
 # 3. Hello-world agent end-to-end (REAL, not demo)
 # ============================================================================
 class TestHelloAgent:
-    def test_hello_agent_fails_loud_without_api_key(self, client: TestClient) -> None:
-        """Without an LLM API key, the agent must return 503 ConfigurationError.
+    def test_hello_agent_fails_loud_without_any_backend(self, client: TestClient) -> None:
+        """Without any LLM backend, the agent must return 503 ConfigurationError.
 
         The agent does NOT return a demo greeting or sample data.
         """
-        if _has_llm_key():
-            pytest.skip("LLM key configured; this test is for the no-key path")
+        if _has_any_backend():
+            pytest.skip("LLM backend available; this test is for the no-backend case")
         r = client.post(
             "/api/v1/agents/runs",
             json={"goal": "Introduce Indus Kernel", "topology": "hello"},
         )
         assert r.status_code == 503, f"expected 503, got {r.status_code}: {r.text}"
         body = r.json()
-        assert "API key" in body["detail"] or "configured" in body["detail"].lower()
+        assert "API key" in body["detail"] or "configured" in body["detail"].lower() or "backend" in body["detail"].lower()
 
     def test_hello_agent_completes_with_real_llm(self, client: TestClient) -> None:
-        """With a real LLM API key, the agent should complete via a real call."""
-        if not _has_llm_key():
-            pytest.skip("no LLM key configured; this test requires one")
+        """With a real LLM backend, the agent should complete via a real call."""
+        if not _has_any_backend():
+            pytest.skip("no LLM backend; this test requires one")
         r = client.post(
             "/api/v1/agents/runs",
             json={"goal": "What is 2+2? Answer in one short sentence.", "topology": "hello"},
@@ -127,7 +138,6 @@ class TestHelloAgent:
         assert body["status"] == "completed"
         assert body["topology"] == "hello"
         assert "run_id" in body
-        # Real LLM was called; result is from the model, not a hardcoded greeting
         assert body["result"], "empty result from LLM"
         assert body["total_tokens"] > 0, "real LLM call should record token usage"
 

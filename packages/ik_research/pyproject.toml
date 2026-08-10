@@ -1,10 +1,17 @@
 [project]
 name = "ik_research"
 version = "0.1.0"
-description = "Autonomous Research Engine — hypothesis → search → experiment → reflect loop"
+description = "Research primitives — typed source/claim/result with explicit provenance, no fabrication"
 requires-python = ">=3.12"
 license = { text = "MIT" }
 authors = [{ name = "Indus Kernel Contributors" }]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "mypy>=1.8",
+    "ruff>=0.3",
+]
 
 [build-system]
 requires = ["hatchling"]
