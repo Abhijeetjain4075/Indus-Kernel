@@ -1,8 +1,8 @@
-"""Prompt Registry endpoints (placeholder for M0; full impl in M8)."""
 from fastapi import APIRouter
-router = APIRouter()
-
+from pydantic import BaseModel,Field
+router=APIRouter(); _prompts={}
+class Prompt(BaseModel): name:str=Field(min_length=1); template:str=Field(min_length=1)
 @router.get("")
-async def list_prompts():
-    """List registered prompts (M0 stub)."""
-    return {"prompts": [], "note": "Prompt registry fully wired in M8"}
+async def list_prompts(): return {"prompts":[{"name":k,"template":v} for k,v in _prompts.items()]}
+@router.post("")
+async def create_prompt(req:Prompt): _prompts[req.name]=req.template; return req.model_dump()

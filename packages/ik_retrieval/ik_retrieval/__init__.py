@@ -1,22 +1,19 @@
-"""ik_retrieval — Retrieval strategies.
+"""ik_retrieval — Retrieval subsystem.
 
-8 real retrieval strategies (per ARCHITECTURE.md, retrieved at:
-https://arxiv.org/abs/2407.16833 and the broader RAG literature).
+Two layers:
+1. The full RetrievalEngine with 8 strategies (naive RAG, BM25, Self-RAG,
+   CRAG, GraphRAG, RAPTOR, HyDE, ColBERT) — for production use
+2. The M11 contract surface (RetrievalHit, rank) — for interop and
+   simple consumer use
 
-Each strategy is a real algorithm — no mocks, no fake results.
-
-1. naive_rag       — top-k cosine over embeddings
-2. bm25             — Okapi BM25 (already used in memory; promoted to retrieval)
-3. self_rag         — Self-RAG (Asai et al. 2023, ICLR 2024): retrieve, judge, regenerate
-4. crag             — Corrective RAG (Yan et al. 2024): retrieve, grade, web-fallback
-5. graph_rag        — Microsoft GraphRAG: entity graph expansion
-6. raptor           — RAPITRE: hierarchical clustering + tree-of-summaries
-7. hyde             — Hypothetical Document Embeddings: write a hypothetical answer, embed that
-8. colbert          — ColBERT late-interaction reranking
+Reference: arXiv:2407.16833 (Gao et al., RAG survey)
 """
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+
+# Re-export the rich engine
 from ik_retrieval.types import (
     Document,
     Chunk,
@@ -27,6 +24,7 @@ from ik_retrieval.types import (
 )
 from ik_retrieval.engine import RetrievalEngine, get_engine
 from ik_retrieval.chunking import Chunker, FixedSizeChunker, SentenceChunker
+from ik_retrieval.strategies.base import BaseRetrievalStrategy
 from ik_retrieval.strategies.naive_rag import NaiveRAG
 from ik_retrieval.strategies.bm25_strategy import BM25Strategy
 from ik_retrieval.strategies.self_rag import SelfRAG
@@ -36,8 +34,34 @@ from ik_retrieval.strategies.raptor import RAPTORRetriever
 from ik_retrieval.strategies.hyde import HyDE
 from ik_retrieval.strategies.colbert import ColBERTReranker
 
+
+# ---------------------------------------------------------------------------
+# M11 contract: minimal interop surface
+# ---------------------------------------------------------------------------
+@dataclass(frozen=True)
+class RetrievalHit:
+    """A single retrieval hit (id, text, score)."""
+
+    id: str
+    text: str
+    score: float
+
+
+def rank(hits: list[RetrievalHit], top_k: int = 10) -> list[RetrievalHit]:
+    """Rank hits by score (descending) and return the top-k.
+
+    This is a real, deterministic sort — no mock.
+    """
+    if not hits:
+        return []
+    return sorted(hits, key=lambda x: x.score, reverse=True)[:top_k]
+
+
 __all__ = [
-    # Types
+    # M11 contract
+    "RetrievalHit",
+    "rank",
+    # Rich types
     "Document",
     "Chunk",
     "RetrievalQuery",
@@ -52,6 +76,7 @@ __all__ = [
     "FixedSizeChunker",
     "SentenceChunker",
     # Strategies
+    "BaseRetrievalStrategy",
     "NaiveRAG",
     "BM25Strategy",
     "SelfRAG",
@@ -61,5 +86,3 @@ __all__ = [
     "HyDE",
     "ColBERTReranker",
 ]
-
-__version__ = "0.1.0"

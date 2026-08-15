@@ -13,9 +13,10 @@ In production, secrets come from HashiCorp Vault via the `ik_security` package.
 from __future__ import annotations
 
 from functools import lru_cache
+from pathlib import Path
 from typing import Literal
 
-from pydantic import Field, PostgresDsn, RedisDsn
+from pydantic import Field, PostgresDsn, RedisDsn, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -33,7 +34,7 @@ class Settings(BaseSettings):
 
     # ---- Meta ----
     app_name: str = "indus-kernel"
-    app_version: str = "0.1.0"
+    app_version: str = "0.11.0"
     environment: Literal["dev", "test", "staging", "production"] = "dev"
     debug: bool = False
     log_level: str = "INFO"
@@ -43,7 +44,15 @@ class Settings(BaseSettings):
     api_port: int = 8000
     api_prefix: str = "/api/v1"
     api_cors_origins: list[str] = Field(default_factory=lambda: ["http://localhost:3000"])
-    api_rate_limit_per_minute: int = 1000
+    api_rate_limit_per_minute: int = 120
+    api_allowed_hosts: list[str] = Field(default_factory=lambda: ["*"])
+    api_keys: str = ""
+    api_require_auth: bool = False
+    api_max_body_bytes: int = 16 * 1024 * 1024
+    jwt_secret: str | None = None
+    jwt_expiration_minutes: int = 15
+    webhook_secrets: dict[str, str] = Field(default_factory=dict)
+    webhook_tolerance_s: int = 300
 
     # ---- Database ----
     database_url: PostgresDsn = Field(
@@ -79,7 +88,8 @@ class Settings(BaseSettings):
     # ---- LLM Router ----
     litellm_proxy_url: str = "http://localhost:4000"
     litellm_master_key: str | None = None
-    default_model: str = "gpt-4o-mini"
+    default_model: str = "indus/tiny-v0.3.0"
+    indus_llm_checkpoint: str | None = None
 
     # ---- Vault (Secrets) ----
     vault_addr: str | None = None
@@ -133,11 +143,36 @@ class Settings(BaseSettings):
     # ---- Multi-tenancy ----
     multi_tenant: bool = True
     default_tenant_id: str = "t-default"
+    production_require_dependencies: bool = False
+    required_services: list[str] = Field(default_factory=list)
+    strict_startup: bool = False
 
     # ---- Paths ----
     config_path: str | None = None
     plugins_dir: str = "./plugins"
     schemas_dir: str = "./schemas"
+
+    @model_validator(mode="after")
+    def validate_runtime_security(self) -> "Settings":
+        if self.environment in {"staging", "production"}:
+            if self.debug:
+                raise ValueError("debug must be false in staging/production")
+            if not self.api_keys:
+                raise ValueError("INDUS_API_KEYS is required in staging/production")
+            if not self.jwt_secret or len(self.jwt_secret) < 32:
+                raise ValueError("INDUS_JWT_SECRET (32+ chars) is required in staging/production")
+            if "*" in self.api_cors_origins:
+                raise ValueError("wildcard CORS is forbidden in staging/production")
+            object.__setattr__(self, "api_require_auth", True)
+            object.__setattr__(self, "production_require_dependencies", True)
+            object.__setattr__(self, "strict_startup", True)
+            if "*" in self.api_allowed_hosts:
+                raise ValueError("wildcard allowed hosts are forbidden in staging/production")
+            if any(v in {"indus", "indus-secret", "indus-dev-secret-change-in-prod"} for v in [self.neo4j_password, self.langfuse_secret_key or ""]):
+                raise ValueError("default development secrets are forbidden in staging/production")
+        if self.indus_llm_checkpoint is not None and not Path(self.indus_llm_checkpoint).is_file():
+            raise ValueError("INDUS_LLM_CHECKPOINT must point to an existing file")
+        return self
 
 
 @lru_cache

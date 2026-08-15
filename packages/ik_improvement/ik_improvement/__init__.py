@@ -1,8 +1,7 @@
-"""ik_improvement — Self-Improvement Engine.
-
-DSPy GEPA (ICLR 2026 Oral) prompt optimisation. GRPO RL. R1 distillation.
-
-Fully wired in M9.
-"""
-
-__version__ = "0.1.0"
+from dataclasses import dataclass
+@dataclass(frozen=True)
+class ImprovementProposal:
+    title:str; rationale:str; risk:str="medium"
+def propose(title:str,rationale:str,risk:str="medium")->ImprovementProposal:
+    if risk not in {"low","medium","high","critical"}: raise ValueError("invalid risk")
+    return ImprovementProposal(title,rationale,risk)

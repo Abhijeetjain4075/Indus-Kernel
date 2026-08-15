@@ -1,8 +1,9 @@
-"""Planning endpoints (placeholder for M0; full impl in M3)."""
 from fastapi import APIRouter
-router = APIRouter()
-
+from pydantic import BaseModel,Field
+from ik_planning import create_plan
+router=APIRouter()
+class PlanRequest(BaseModel): goal:str=Field(min_length=1,max_length=20000)
 @router.post("")
-async def create_plan():
-    """Create a plan (M0 stub)."""
-    return {"plan_id": None, "note": "Planning fully wired in M3"}
+async def create(req:PlanRequest):
+    p=create_plan(req.goal)
+    return {"goal":p.goal,"steps":[s.__dict__ for s in p.steps]}

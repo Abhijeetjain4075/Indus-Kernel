@@ -1,11 +1,9 @@
-"""ik_wasm — WASM Plugin Runtime (Subsystem 40, new in v1.1.0).
-
-Replaces the original Plugin Manager. Wasmtime + WASI 0.2 + Component Model
-+ Extism (multi-language SDK) + Wassette (Microsoft, Wasmtime + OCI for MCP).
-
-Capability-based security. About 1-3ms cold start. 15MB memory per instance.
-
-Fully wired in M7.5.
-"""
-
-__version__ = "0.1.0"
+"""WASM execution boundary. Uses wasmtime when explicitly configured; never executes host binaries."""
+class WasmExecutionUnavailable(RuntimeError): pass
+def execute_module(module_bytes:bytes,entrypoint:str="_start",stdin:bytes=b"",fuel:int=1_000_000):
+ if not module_bytes: raise ValueError("module_bytes required")
+ try: from wasmtime import Engine,Store,Module,Linker
+ except ImportError as exc: raise WasmExecutionUnavailable("install wasmtime") from exc
+ engine=Engine(); store=Store(engine); store.set_fuel(fuel); module=Module(engine,module_bytes); linker=Linker(engine); instance=linker.instantiate(store,module); fn=instance.exports(store).get(entrypoint)
+ if fn is None: raise WasmExecutionUnavailable(f"entrypoint not found: {entrypoint}")
+ return fn(store)

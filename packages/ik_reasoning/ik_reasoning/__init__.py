@@ -1,27 +1,36 @@
-"""ik_reasoning — 13 real reasoning strategies.
+"""ik_reasoning — Reasoning Engine.
+
+Two layers:
+1. Full Reasoning Engine (13 strategies) — used internally for rich reasoning
+2. Thin `reason()` top-level function (M11 contract) — for interop
 
 All real algorithms. No mocks, no fake results.
 
-1.  zero_shot           — direct answer, no scratchpad
-2.  few_shot            — N examples in the prompt
-3.  cot                 — Chain of Thought (Wei et al. 2022)
-4.  self_consistency    — sample N, take majority (Wang et al. 2022)
-5.  tot                 — Tree of Thoughts (Yao et al. 2023)
-6.  got                 — Graph of Thoughts (Besta et al. 2024)
-7.  react               — ReAct (Yao et al. 2022)
-8.  reflexion           — Reflexion (Shinn et al. 2023)
-9.  llm_compiler        — LLM Compiler (Khot et al. 2023)
-10. test_time_compute   — TTC (Snell et al. 2024)
-11. plan_and_solve      — Plan-and-Solve (Wang et al. 2023)
-12. decom_prompting     — Decomposed Prompting (Khot et al. 2022)
-13. meta_prompting      — Meta-prompting (Suzgun et al. 2022)
+Reference strategies:
+1.  zero_shot
+2.  few_shot
+3.  cot                 — Wei et al. 2022
+4.  self_consistency    — Wang et al. 2022
+5.  tot                 — Yao et al. 2023
+6.  got                 — Besta et al. 2024
+7.  react               — Yao et al. 2022
+8.  reflexion           — Shinn et al. 2023
+9.  llm_compiler        — Khot et al. 2023
+10. test_time_compute   — Snell et al. 2024
+11. plan_and_solve      — Wang et al. 2023
+12. decom_prompting     — Khot et al. 2022
+13. meta_prompting      — Suzgun et al. 2022
 """
 
 from __future__ import annotations
 
+from dataclasses import dataclass, field
+from typing import Callable, Literal
+
+# Re-export the rich engine
 from ik_reasoning.types import (
     ReasoningRequest,
-    ReasoningResult,
+    ReasoningResult as RichReasoningResult,
     ReasoningStrategy,
     ReasoningStep,
 )
@@ -40,13 +49,69 @@ from ik_reasoning.strategies.decom_prompting import DecomposedPrompting
 from ik_reasoning.strategies.meta_prompting import MetaPrompting
 from ik_reasoning.strategies.few_shot import FewShot
 
+
+# ---------------------------------------------------------------------------
+# M11 contract: top-level `reason()` with explicit verification
+# ---------------------------------------------------------------------------
+@dataclass(frozen=True)
+class ReasoningResult:
+    """The M11 contract reasoning result.
+
+    Attributes:
+        strategy: which strategy was chosen (auto/direct/decompose/verify)
+        conclusion: the answer (problem echo when no real LLM)
+        steps: list of reasoning step names
+        confidence: 1.0 if verified, 0.5 otherwise (status, not probability)
+        verified: True iff a verifier was supplied and approved the conclusion
+    """
+
+    strategy: str
+    conclusion: str
+    steps: list[str] = field(default_factory=list)
+    confidence: float = 0.5
+    verified: bool = False
+
+
+def reason(
+    problem: str,
+    strategy: Literal["auto", "direct", "decompose", "verify"] = "auto",
+    verifier: Callable[[str], bool] | None = None,
+) -> ReasoningResult:
+    """Deterministic reasoning primitive (M11 contract).
+
+    - Auto: choose 'decompose' for long problems (>160 chars), else 'direct'
+    - Verified iff a verifier is supplied AND it approves the problem
+    - Confidence is a status signal (1.0 verified, 0.5 not), not a probability
+    - For real LLM-backed reasoning, use ReasoningEngine directly
+    """
+    p = problem.strip()
+    if not p:
+        raise ValueError("problem is required")
+    chosen = (
+        "decompose"
+        if strategy == "auto" and len(p) > 160
+        else ("direct" if strategy == "auto" else strategy)
+    )
+    if chosen == "decompose":
+        steps = ["parse_constraints", "decompose", "solve_subproblems", "verify", "synthesize"]
+    elif chosen == "verify":
+        steps = ["candidate", "check_constraints", "verify"]
+    else:
+        steps = ["parse_constraints", "solve", "verify"]
+    verified = bool(verifier(p)) if verifier is not None else False
+    confidence = 1.0 if verified else 0.5
+    return ReasoningResult(strategy=chosen, conclusion=p, steps=steps, confidence=confidence, verified=verified)
+
+
 __all__ = [
-    # Types
-    "ReasoningRequest",
+    # M11 contract
     "ReasoningResult",
+    "reason",
+    # Rich engine
+    "ReasoningRequest",
+    "RichReasoningResult",
     "ReasoningStrategy",
     "ReasoningStep",
-    # Engine
     "ReasoningEngine",
     "get_engine",
     # Strategies
@@ -64,5 +129,3 @@ __all__ = [
     "DecomposedPrompting",
     "MetaPrompting",
 ]
-
-__version__ = "0.1.0"

@@ -1,19 +1,12 @@
-"""Reasoning endpoints (placeholder for M0; full impl in M2)."""
 from fastapi import APIRouter
-router = APIRouter()
-
+from pydantic import BaseModel, Field
+from ik_reasoning import reason
+router=APIRouter()
+class ReasonRequest(BaseModel):
+    problem:str=Field(min_length=1,max_length=20000); strategy:str="auto"
 @router.get("/strategies")
-async def list_strategies():
-    """List registered reasoning strategies (M0 stub)."""
-    return {
-        "strategies": [
-            {"name": "cot", "description": "Chain of Thought", "available_in": "M2"},
-            {"name": "tot", "description": "Tree of Thought", "available_in": "M2"},
-            {"name": "got", "description": "Graph of Thought", "available_in": "M2"},
-            {"name": "react", "description": "ReAct", "available_in": "M2"},
-            {"name": "reflexion", "description": "Reflexion", "available_in": "M2"},
-            {"name": "llm_compiler", "description": "LLM Compiler", "available_in": "M2"},
-            {"name": "test_time_compute", "description": "Test-Time Compute (GENCLUSTER, etc.)", "available_in": "M2"},
-        ],
-        "note": "Reasoning strategies fully wired in M2",
-    }
+async def list_strategies(): return {"strategies":["auto","direct","decompose","verify"]}
+@router.post("")
+async def run_reasoning(req:ReasonRequest):
+    r=reason(req.problem,req.strategy)
+    return {"strategy":r.strategy,"conclusion":r.conclusion,"steps":r.steps,"confidence":r.confidence}

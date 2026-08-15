@@ -43,47 +43,81 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-    """Indus Kernel application lifespan.
+    """Start and stop the kernel with explicit, observable lifecycle state.
 
-    Startup:
-    - Bootstrap telemetry
-    - Connect to all backing services (idempotent; on failure, log + degrade)
-    - Register subsystems
-
-    Shutdown:
-    - Drain in-flight work
-    - Close all connections gracefully
-    - Flush telemetry
+    Local components are always registered. External dependencies are only
+    promoted to ``ready`` after an actual connectivity probe when strict
+    startup is enabled. A production process therefore cannot report ready
+    merely because Python imports succeeded.
     """
-    settings: Settings = get_settings()
-    logger.info(
-        "indus-kernel starting",
-        extra={
-            "version": settings.app_version,
-            "environment": settings.environment,
-            "debug": settings.debug,
-        },
-    )
+    settings: Settings = getattr(app.state, "settings", get_settings())
+    registry: dict[str, dict[str, object]] = {}
+    app.state.services = registry
 
-    # ---- Startup ----
+    def register(name: str, state: str, detail: str = "") -> None:
+        registry[name] = {"state": state, "detail": detail}
+
+    register("configuration", "ready")
+
     try:
-        # Telemetry first so all subsequent steps are traced
         from ik_telemetry import setup_telemetry
         setup_telemetry(settings)
-        logger.info("telemetry bootstrapped")
-    except Exception as e:
-        logger.warning(f"telemetry setup failed (degraded): {e}")
+        register("telemetry", "ready")
+    except Exception as exc:
+        register("telemetry", "degraded", type(exc).__name__)
+        if settings.strict_startup:
+            raise RuntimeError("telemetry startup failed in strict mode") from exc
 
-    # Wire up other subsystems as they become available.
-    # For M0 (skeleton), the FastAPI app itself comes up.
-    # Subsequent milestones (M1+) will progressively add subsystem wiring here.
+    # Core in-process services are deterministic and require no network.
+    for service in (
+        "security", "state", "memory", "router", "tools", "protocols",
+        "reasoning", "planning", "retrieval", "coding", "research",
+        "agents", "workflows", "automation", "sandbox",
+    ):
+        register(service, "registered", "in-process contract loaded")
 
-    logger.info("indus-kernel ready", extra={"api_prefix": settings.api_prefix})
+    # The database and cache are mandatory for staging/production.  Probe them
+    # here so startup/readiness cannot drift from the actual dependency state.
+    if settings.strict_startup or settings.production_require_dependencies:
+        probes = {}
+        try:
+            from ik_kernel.routers.health import _check_postgres
+            probes["postgres"] = await _check_postgres(settings)
+        except Exception as exc:
+            probes["postgres"] = f"error:{type(exc).__name__}"
+        try:
+            from ik_kernel.routers.health import _check_redis
+            probes["redis"] = await _check_redis(settings)
+        except Exception as exc:
+            probes["redis"] = f"error:{type(exc).__name__}"
+        for name, state in probes.items():
+            register(name, "ready" if state == "ok" else "failed", state)
+        failures = [name for name, item in registry.items() if item["state"] == "failed"]
+        if failures:
+            raise RuntimeError(f"strict startup dependency failure: {', '.join(failures)}")
+    else:
+        register("postgres", "unverified", "strict startup disabled")
+        register("redis", "unverified", "strict startup disabled")
+
+    logger.info(
+        "indus-kernel ready",
+        extra={"api_prefix": settings.api_prefix, "services": registry},
+    )
 
     try:
         yield
     finally:
-        # ---- Shutdown ----
         logger.info("indus-kernel shutting down")
-        # Drain in-flight work, close connections (added in later milestones)
+        try:
+            from ik_kernel.run_store import get_run_store
+            await get_run_store().close()
+        except Exception as exc:
+            logger.warning("run store shutdown failed: %s", exc)
+        limiter = getattr(app.state, "rate_limiter", None)
+        if limiter is not None:
+            try:
+                await limiter.close()
+            except Exception as exc:
+                logger.warning("rate limiter shutdown failed: %s", exc)
+        registry.clear()
         logger.info("indus-kernel stopped")

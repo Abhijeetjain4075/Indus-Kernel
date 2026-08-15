@@ -1,16 +1,12 @@
-"""Health, readiness, and version endpoints.
-
-GET /healthz   — liveness probe (is the process alive?)
-GET /readyz    — readiness probe (are backing services connected?)
-GET /version   — kernel version + git SHA + environment
-"""
-
+"""Liveness, readiness and version endpoints."""
 from __future__ import annotations
 
-from fastapi import APIRouter, Response, status
+import asyncio
+
+from fastapi import APIRouter, Depends, Response, status
 from pydantic import BaseModel
 
-from ik_kernel.config import get_settings
+from ik_kernel.config import Settings, get_settings
 from ik_kernel.version import __version__
 
 router = APIRouter()
@@ -32,54 +28,46 @@ class VersionResponse(BaseModel):
 
 
 @router.get("/healthz", response_model=HealthResponse, tags=["health"])
-async def healthz(response: Response) -> HealthResponse:
-    """Liveness probe.
+async def healthz(settings: Settings = Depends(get_settings)) -> HealthResponse:
+    return HealthResponse(status="ok", version=__version__, environment=settings.environment, components={"process": "ok"})
 
-    Returns 200 if the process is alive. Does NOT check backing services.
-    Use /readyz for that.
-    """
-    settings = get_settings()
-    return HealthResponse(
-        status="ok",
-        version=__version__,
-        environment=settings.environment,
-        components={"process": "ok"},
-    )
+
+async def _check_postgres(settings: Settings | None = None) -> str:
+    import asyncpg
+    s = settings or get_settings()
+    url = str(s.database_url).replace("postgresql+asyncpg://", "postgresql://")
+    conn = await asyncpg.connect(url, timeout=2)
+    try:
+        await conn.execute("SELECT 1")
+    finally:
+        await conn.close()
+    return "ok"
+
+
+async def _check_redis(settings: Settings | None = None) -> str:
+    from redis.asyncio import Redis
+    s = settings or get_settings()
+    client = Redis.from_url(str(s.redis_url), socket_connect_timeout=2, socket_timeout=2)
+    try:
+        await client.ping()
+    finally:
+        await client.aclose()
+    return "ok"
 
 
 @router.get("/readyz", response_model=HealthResponse, tags=["health"])
-async def readyz(response: Response) -> HealthResponse:
-    """Readiness probe.
-
-    Returns 200 if all critical backing services are reachable.
-    Returns 503 otherwise. K8s should NOT route traffic to a 503 instance.
-    """
-    settings = get_settings()
+async def readyz(response: Response, settings: Settings = Depends(get_settings)) -> HealthResponse:
     components: dict[str, str] = {"process": "ok"}
-
-    # In M0 (skeleton), we only check that the process is up.
-    # In M1+, this will check Postgres, Redis, NATS, Qdrant, Neo4j.
-
+    if settings.production_require_dependencies or settings.environment in {"staging", "production"}:
+        checks = await asyncio.gather(_check_postgres(settings), _check_redis(settings), return_exceptions=True)
+        components["postgres"] = "ok" if checks[0] == "ok" else f"error:{type(checks[0]).__name__}"
+        components["redis"] = "ok" if checks[1] == "ok" else f"error:{type(checks[1]).__name__}"
     all_ok = all(v == "ok" for v in components.values())
     if not all_ok:
         response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
-
-    return HealthResponse(
-        status="ok" if all_ok else "degraded",
-        version=__version__,
-        environment=settings.environment,
-        components=components,
-    )
+    return HealthResponse(status="ok" if all_ok else "degraded", version=__version__, environment=settings.environment, components=components)
 
 
 @router.get("/version", response_model=VersionResponse, tags=["health"])
-async def version() -> VersionResponse:
-    """Return kernel version metadata."""
-    settings = get_settings()
-    return VersionResponse(
-        version=__version__,
-        environment=settings.environment,
-        debug=settings.debug,
-        api_prefix=settings.api_prefix,
-        multi_tenant=settings.multi_tenant,
-    )
+async def version(settings: Settings = Depends(get_settings)) -> VersionResponse:
+    return VersionResponse(version=__version__, environment=settings.environment, debug=settings.debug, api_prefix=settings.api_prefix, multi_tenant=settings.multi_tenant)

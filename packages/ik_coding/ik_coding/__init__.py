@@ -1,10 +1,6 @@
-"""ik_coding — Coding Engine.
-
-Wraps Aider + OpenHands + SWE-agent + mini-SWE-agent.
-
-Adapter pattern; no coding-agent code in-kernel.
-
-Fully wired in M5.
-"""
-
-__version__ = "0.1.0"
+from dataclasses import dataclass
+@dataclass(frozen=True)
+class CodeTask:
+    language:str; instruction:str
+def validate_code_request(task:CodeTask)->None:
+    if not task.language or not task.instruction.strip(): raise ValueError("language and instruction are required")

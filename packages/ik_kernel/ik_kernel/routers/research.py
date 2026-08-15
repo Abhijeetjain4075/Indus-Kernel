@@ -1,8 +1,7 @@
-"""Research endpoints (placeholder for M0; full impl in M5)."""
 from fastapi import APIRouter
-router = APIRouter()
-
+from pydantic import BaseModel,Field
+from ik_research import ResearchTask,make_research_brief
+router=APIRouter()
+class ResearchRequest(BaseModel): question:str=Field(min_length=1,max_length=20000); max_sources:int=10
 @router.post("")
-async def start_research():
-    """Start autonomous research (M0 stub)."""
-    return {"research_id": None, "note": "Research engine fully wired in M5"}
+async def start_research(req:ResearchRequest): return make_research_brief(ResearchTask(req.question,req.max_sources))

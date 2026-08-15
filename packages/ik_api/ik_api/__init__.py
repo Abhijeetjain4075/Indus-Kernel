@@ -1,9 +1,6 @@
-"""ik_api — API Gateway.
-
-Built into ik_kernel.app. This package is reserved for future
-edge cases (e.g., multi-region API gateway, gRPC gateway).
-
-In M0, all API logic is in ik_kernel.routers.
-"""
-
-__version__ = "0.1.0"
+"""API package: contracts and gateway helpers."""
+from dataclasses import dataclass
+@dataclass(frozen=True)
+class APIInfo:
+    name:str="indus-kernel"; version:str="0.11.0"; api_prefix:str="/api/v1"
+__version__="1.0.0"

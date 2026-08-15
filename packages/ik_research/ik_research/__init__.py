@@ -95,8 +95,7 @@ def research(task: ResearchTask, sources: Iterable[ResearchSource]) -> ResearchR
     4. If no source contains relevant content, return empty claims +
        explicit limitation.
 
-    This function never invents sources. It only emits claims derived
-    from the supplied sources.
+    This function never invents sources.
     """
     task.validate()
     srcs = tuple(sources)
@@ -149,9 +148,22 @@ def research(task: ResearchTask, sources: Iterable[ResearchSource]) -> ResearchR
 
 
 __all__ = [
+    "make_research_brief",
     "ResearchTask",
     "ResearchSource",
     "ResearchClaim",
     "ResearchResult",
     "research",
 ]
+
+
+# ---------------------------------------------------------------------------
+# M11 contract: research brief
+# ---------------------------------------------------------------------------
+def make_research_brief(question: str, max_sources: int = 5) -> ResearchTask:
+    """Build a ResearchTask (a research brief) from a question.
+
+    Convenience for the M11 contract: callers provide a question and
+    get a ResearchTask they can pass to research().
+    """
+    return ResearchTask(question=question, max_sources=max_sources)
