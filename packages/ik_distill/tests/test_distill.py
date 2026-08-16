@@ -1,7 +1,9 @@
 """Real tests for ik_distill."""
+
 import json
+
 import pytest
-from ik_distill import DistillationRecord, build_record, to_jsonl
+from ik_distill import build_record, to_jsonl
 
 
 class TestDistill:
@@ -26,12 +28,12 @@ class TestDistill:
             build_record("q2", "a2", "a2"),
         ]
         text = to_jsonl(records)
-        lines = [l for l in text.strip().split("\n") if l]
+        lines = [x for x in text.strip().split("\n") if x]
         assert len(lines) == 2
         for i, line in enumerate(lines):
             d = json.loads(line)
-            assert d["prompt"] == f"q{i+1}"
-            assert d["teacher_output"] == f"a{i+1}"
-            assert d["target"] == f"a{i+1}"
+            assert d["prompt"] == f"q{i + 1}"
+            assert d["teacher_output"] == f"a{i + 1}"
+            assert d["target"] == f"a{i + 1}"
             assert d["id"]
             assert d["created_at"]

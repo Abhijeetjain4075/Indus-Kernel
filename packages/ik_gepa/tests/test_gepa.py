@@ -1,4 +1,5 @@
 """Real tests for ik_gepa."""
+
 import pytest
 from ik_gepa import OptimizationResult, optimize
 

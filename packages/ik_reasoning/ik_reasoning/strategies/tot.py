@@ -9,13 +9,11 @@ from __future__ import annotations
 
 import asyncio
 import time
-import uuid
 
 from ik_reasoning.strategies.base import BaseReasoningStrategy
 from ik_reasoning.types import ReasoningRequest, ReasoningResult, ReasoningStep, ReasoningStrategy
 from ik_router.router import get_router
 from ik_router.types import LLMRequest, Message, MessageRole
-
 
 _TOT_BRANCH_PROMPT = """Given the question and the current reasoning path, propose 3 distinct next thoughts that could continue the reasoning. Each thought should be a single sentence. Number them 1, 2, 3.
 
@@ -45,10 +43,16 @@ class TreeOfThoughts(BaseReasoningStrategy):
         resp = await router.complete(
             LLMRequest(
                 messages=[
-                    Message(role=MessageRole.SYSTEM, content="You propose distinct next reasoning steps."),
-                    Message(role=MessageRole.USER, content=_TOT_BRANCH_PROMPT.format(
-                        question=question, path=" → ".join(path) or "(start)"
-                    )),
+                    Message(
+                        role=MessageRole.SYSTEM,
+                        content="You propose distinct next reasoning steps.",
+                    ),
+                    Message(
+                        role=MessageRole.USER,
+                        content=_TOT_BRANCH_PROMPT.format(
+                            question=question, path=" → ".join(path) or "(start)"
+                        ),
+                    ),
                 ],
                 capability_requirements=["text"],
                 temperature=0.8,
@@ -57,6 +61,7 @@ class TreeOfThoughts(BaseReasoningStrategy):
         )
         # Parse numbered lines
         import re
+
         lines = [l.strip() for l in resp.content.split("\n") if l.strip()]
         thoughts = []
         for ln in lines:
@@ -72,7 +77,10 @@ class TreeOfThoughts(BaseReasoningStrategy):
                 LLMRequest(
                     messages=[
                         Message(role=MessageRole.SYSTEM, content="You rate reasoning steps 1-10."),
-                        Message(role=MessageRole.USER, content=_TOT_EVAL_PROMPT.format(question=question, thought=thought)),
+                        Message(
+                            role=MessageRole.USER,
+                            content=_TOT_EVAL_PROMPT.format(question=question, thought=thought),
+                        ),
                     ],
                     capability_requirements=["text"],
                     temperature=0.0,
@@ -81,6 +89,7 @@ class TreeOfThoughts(BaseReasoningStrategy):
             )
             # Parse first integer
             import re
+
             m = re.search(r"\d+", resp.content)
             return min(10, max(1, int(m.group(0)))) / 10.0 if m else 0.5
         except Exception:
@@ -102,16 +111,20 @@ class TreeOfThoughts(BaseReasoningStrategy):
             for path, _ in frontier:
                 thoughts = await self._branch(req.question, path)
                 # Evaluate each in parallel
-                evals = await asyncio.gather(*[self._evaluate(req.question, " → ".join(path + [t])) for t in thoughts])
+                evals = await asyncio.gather(
+                    *[self._evaluate(req.question, " → ".join(path + [t])) for t in thoughts]
+                )
                 for t, e in zip(thoughts, evals):
                     branches.append((path + [t], e))
             branches.sort(key=lambda x: x[1], reverse=True)
             frontier = branches[: self.beam]
-            steps.append(ReasoningStep(
-                type="thought",
-                content=f"depth {depth}: kept {len(frontier)} paths from {len(branches)}",
-                metadata={"depth": depth, "n_branches": len(branches)},
-            ))
+            steps.append(
+                ReasoningStep(
+                    type="thought",
+                    content=f"depth {depth}: kept {len(frontier)} paths from {len(branches)}",
+                    metadata={"depth": depth, "n_branches": len(branches)},
+                )
+            )
             if frontier and frontier[0][1] > best_score:
                 best_score = frontier[0][1]
                 best_path = frontier[0][0]

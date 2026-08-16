@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 
-from ik_retrieval.types import Chunk, RetrievalQuery, RetrievalResult, ScoredChunk
+from ik_retrieval.types import Chunk, RetrievalQuery, RetrievalResult
 
 
 class BaseRetrievalStrategy(ABC):

@@ -1,10 +1,13 @@
 """Authenticated webhook ingress with HMAC verification and replay protection."""
+
 from __future__ import annotations
 
 import hashlib
 import hmac
 import time
+
 from fastapi import APIRouter, Header, HTTPException, Request, status
+
 from ik_kernel.config import get_settings
 
 router = APIRouter()
@@ -21,9 +24,13 @@ async def receive_webhook(
     settings = get_settings()
     secret = settings.webhook_secrets.get(source)
     if not secret:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="webhook_source_not_configured")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="webhook_source_not_configured"
+        )
     if not x_indus_signature or not x_indus_timestamp or not x_indus_event_id:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="missing_webhook_authentication")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="missing_webhook_authentication"
+        )
     try:
         ts = int(x_indus_timestamp)
     except ValueError as exc:

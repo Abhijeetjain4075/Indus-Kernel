@@ -8,16 +8,13 @@ Reference: arXiv:2308.09687
 
 from __future__ import annotations
 
-import asyncio
 import time
 import uuid
-from collections import defaultdict
 
 from ik_reasoning.strategies.base import BaseReasoningStrategy
 from ik_reasoning.types import ReasoningRequest, ReasoningResult, ReasoningStep, ReasoningStrategy
 from ik_router.router import get_router
 from ik_router.types import LLMRequest, Message, MessageRole
-
 
 _GOT_GENERATE_PROMPT = """Generate 2 distinct thoughts that could help answer the question. Each thought should be a single sentence. Number them 1, 2.
 
@@ -55,8 +52,13 @@ class GraphOfThoughts(BaseReasoningStrategy):
         resp = await router.complete(
             LLMRequest(
                 messages=[
-                    Message(role=MessageRole.SYSTEM, content="You generate distinct reasoning thoughts."),
-                    Message(role=MessageRole.USER, content=_GOT_GENERATE_PROMPT.format(question=question)),
+                    Message(
+                        role=MessageRole.SYSTEM, content="You generate distinct reasoning thoughts."
+                    ),
+                    Message(
+                        role=MessageRole.USER,
+                        content=_GOT_GENERATE_PROMPT.format(question=question),
+                    ),
                 ],
                 capability_requirements=["text"],
                 temperature=0.9,
@@ -64,6 +66,7 @@ class GraphOfThoughts(BaseReasoningStrategy):
             )
         )
         import re
+
         lines = [l.strip() for l in resp.content.split("\n") if l.strip()]
         out = []
         for ln in lines:
@@ -78,7 +81,12 @@ class GraphOfThoughts(BaseReasoningStrategy):
             LLMRequest(
                 messages=[
                     Message(role=MessageRole.SYSTEM, content="You combine thoughts into insights."),
-                    Message(role=MessageRole.USER, content=_GOT_AGGREGATE_PROMPT.format(thoughts="\n".join(f"- {t}" for t in thoughts))),
+                    Message(
+                        role=MessageRole.USER,
+                        content=_GOT_AGGREGATE_PROMPT.format(
+                            thoughts="\n".join(f"- {t}" for t in thoughts)
+                        ),
+                    ),
                 ],
                 capability_requirements=["text"],
                 temperature=0.3,
@@ -113,7 +121,11 @@ class GraphOfThoughts(BaseReasoningStrategy):
                     parent_node = nodes[parent]
                     parent_node.children.append(n.id)
                 new_ids.append(n.id)
-                steps.append(ReasoningStep(type="thought", content=t, metadata={"generation": gen, "id": n.id}))
+                steps.append(
+                    ReasoningStep(
+                        type="thought", content=t, metadata={"generation": gen, "id": n.id}
+                    )
+                )
             current_layer = new_ids
 
         # Aggregate all final-layer thoughts into a final answer
@@ -123,7 +135,13 @@ class GraphOfThoughts(BaseReasoningStrategy):
         else:
             answer = "(no thoughts generated)"
 
-        steps.append(ReasoningStep(type="final", content=answer, metadata={"n_nodes": len(nodes), "n_edges": len(edges)}))
+        steps.append(
+            ReasoningStep(
+                type="final",
+                content=answer,
+                metadata={"n_nodes": len(nodes), "n_edges": len(edges)},
+            )
+        )
         return ReasoningResult(
             request=req,
             answer=answer,

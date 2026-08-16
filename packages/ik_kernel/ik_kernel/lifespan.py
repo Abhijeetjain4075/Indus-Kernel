@@ -31,8 +31,8 @@ Shutdown is the reverse order.
 from __future__ import annotations
 
 import logging
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from typing import AsyncIterator
 
 from fastapi import FastAPI
 
@@ -61,6 +61,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
     try:
         from ik_telemetry import setup_telemetry
+
         setup_telemetry(settings)
         register("telemetry", "ready")
     except Exception as exc:
@@ -70,9 +71,21 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
     # Core in-process services are deterministic and require no network.
     for service in (
-        "security", "state", "memory", "router", "tools", "protocols",
-        "reasoning", "planning", "retrieval", "coding", "research",
-        "agents", "workflows", "automation", "sandbox",
+        "security",
+        "state",
+        "memory",
+        "router",
+        "tools",
+        "protocols",
+        "reasoning",
+        "planning",
+        "retrieval",
+        "coding",
+        "research",
+        "agents",
+        "workflows",
+        "automation",
+        "sandbox",
     ):
         register(service, "registered", "in-process contract loaded")
 
@@ -82,11 +95,13 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         probes = {}
         try:
             from ik_kernel.routers.health import _check_postgres
+
             probes["postgres"] = await _check_postgres(settings)
         except Exception as exc:
             probes["postgres"] = f"error:{type(exc).__name__}"
         try:
             from ik_kernel.routers.health import _check_redis
+
             probes["redis"] = await _check_redis(settings)
         except Exception as exc:
             probes["redis"] = f"error:{type(exc).__name__}"
@@ -110,6 +125,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         logger.info("indus-kernel shutting down")
         try:
             from ik_kernel.run_store import get_run_store
+
             await get_run_store().close()
         except Exception as exc:
             logger.warning("run store shutdown failed: %s", exc)

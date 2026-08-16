@@ -18,10 +18,9 @@ from __future__ import annotations
 
 import asyncio
 import time
-import pytest
 
+import pytest
 from ik_kernel.orchestration import (
-    Evaluation,
     EvaluationOutcome,
     Executor,
     Orchestrator,
@@ -29,20 +28,8 @@ from ik_kernel.orchestration import (
     Planner,
     StepStatus,
     TaskSpec,
-    TaskStatus,
     get_orchestrator,
 )
-from ik_kernel.orchestration.events import (
-    ExecutionCompleted,
-    ExecutionFailed,
-    PlanValidated,
-    StepCompleted,
-    StepFailed,
-    StepStarted,
-    TaskCreated,
-    TaskPlanned,
-)
-from ik_kernel.orchestration.executor import CapabilityHandler
 from ik_kernel.orchestration.types import PlanStep
 
 
@@ -68,7 +55,9 @@ class TestTaskSpec:
 class TestPlan:
     def test_validates_unique_ids(self):
         with pytest.raises(ValueError, match="duplicate step id"):
-            Plan(goal="x", steps=[PlanStep("a", "t", "noop"), PlanStep("a", "t", "noop")]).validate()
+            Plan(
+                goal="x", steps=[PlanStep("a", "t", "noop"), PlanStep("a", "t", "noop")]
+            ).validate()
 
     def test_validates_unknown_dep(self):
         with pytest.raises(ValueError, match="unknown dependency"):
@@ -76,28 +65,37 @@ class TestPlan:
 
     def test_validates_cycle(self):
         with pytest.raises(ValueError, match="cycle"):
-            Plan(goal="x", steps=[
-                PlanStep("a", "A", "noop", depends_on=["b"]),
-                PlanStep("b", "B", "noop", depends_on=["a"]),
-            ]).validate()
+            Plan(
+                goal="x",
+                steps=[
+                    PlanStep("a", "A", "noop", depends_on=["b"]),
+                    PlanStep("b", "B", "noop", depends_on=["a"]),
+                ],
+            ).validate()
 
     def test_topological_order(self):
-        p = Plan(goal="x", steps=[
-            PlanStep("a", "A", "noop"),
-            PlanStep("b", "B", "noop", depends_on=["a"]),
-            PlanStep("c", "C", "noop", depends_on=["a", "b"]),
-        ])
+        p = Plan(
+            goal="x",
+            steps=[
+                PlanStep("a", "A", "noop"),
+                PlanStep("b", "B", "noop", depends_on=["a"]),
+                PlanStep("c", "C", "noop", depends_on=["a", "b"]),
+            ],
+        )
         order = p.topological_order()
         assert order[0] == "a"
         assert order[-1] == "c"
         assert order.index("b") < order.index("c")
 
     def test_ready_steps(self):
-        p = Plan(goal="x", steps=[
-            PlanStep("a", "A", "noop"),
-            PlanStep("b", "B", "noop", depends_on=["a"]),
-            PlanStep("c", "C", "noop", depends_on=["a", "b"]),
-        ])
+        p = Plan(
+            goal="x",
+            steps=[
+                PlanStep("a", "A", "noop"),
+                PlanStep("b", "B", "noop", depends_on=["a"]),
+                PlanStep("c", "C", "noop", depends_on=["a", "b"]),
+            ],
+        )
         assert {s.id for s in p.ready_steps(set())} == {"a"}
         assert {s.id for s in p.ready_steps({"a"})} == {"b"}
         assert {s.id for s in p.ready_steps({"a", "b"})} == {"c"}
@@ -107,6 +105,7 @@ class TestEvaluator:
     def test_pass_on_success(self):
         from ik_kernel.orchestration.evaluator import Evaluator
         from ik_kernel.orchestration.types import Observation
+
         e = Evaluator()
         ev = e.evaluate_step("s1", Observation("s1", "ok", 1, 100), TaskSpec(goal="x"))
         assert ev.outcome == EvaluationOutcome.PASS
@@ -115,6 +114,7 @@ class TestEvaluator:
     def test_fail_on_no_output(self):
         from ik_kernel.orchestration.evaluator import Evaluator
         from ik_kernel.orchestration.types import Observation
+
         e = Evaluator()
         ev = e.evaluate_step("s1", Observation("s1", None), TaskSpec(goal="x"))
         assert ev.outcome == EvaluationOutcome.REPLAN
@@ -122,6 +122,7 @@ class TestEvaluator:
     def test_fail_on_empty_string(self):
         from ik_kernel.orchestration.evaluator import Evaluator
         from ik_kernel.orchestration.types import Observation
+
         e = Evaluator()
         ev = e.evaluate_step("s1", Observation("s1", "  "), TaskSpec(goal="x"))
         assert ev.outcome == EvaluationOutcome.REPLAN
@@ -129,8 +130,13 @@ class TestEvaluator:
     def test_abort_on_cost_overrun(self):
         from ik_kernel.orchestration.evaluator import Evaluator
         from ik_kernel.orchestration.types import Observation
+
         e = Evaluator()
-        ev = e.evaluate_step("s1", Observation("s1", "ok", cost_cents=2000, latency_ms=10), TaskSpec(goal="x", max_cost_cents=100))
+        ev = e.evaluate_step(
+            "s1",
+            Observation("s1", "ok", cost_cents=2000, latency_ms=10),
+            TaskSpec(goal="x", max_cost_cents=100),
+        )
         assert ev.outcome == EvaluationOutcome.ABORT
 
 
@@ -166,8 +172,10 @@ class TestExecutor:
     @pytest.mark.asyncio
     async def test_runs_simple_plan(self):
         ex = Executor()
+
         async def echo(step, task, ctx):
             return f"echo:{step.args.get('x', '')}"
+
         ex.register_handler("echo", echo)
         plan = Plan(goal="x", steps=[PlanStep("s1", "Echo", "echo", args={"x": "hello"})])
         exec_ = await ex.run(TaskSpec(goal="x"), plan, [])
@@ -185,11 +193,15 @@ class TestExecutor:
     @pytest.mark.asyncio
     async def test_handles_timeout(self):
         ex = Executor()
+
         async def slow(step, task, ctx):
             await asyncio.sleep(10)
             return "should not get here"
+
         ex.register_handler("slow", slow)
-        plan = Plan(goal="x", steps=[PlanStep("s1", "X", "slow", args={}, timeout_s=1, max_retries=0)])
+        plan = Plan(
+            goal="x", steps=[PlanStep("s1", "X", "slow", args={}, timeout_s=1, max_retries=0)]
+        )
         exec_ = await ex.run(TaskSpec(goal="x"), plan, [])
         assert exec_.steps["s1"].status == StepStatus.FAILED
 
@@ -199,6 +211,7 @@ class TestExecutor:
 
         async def buggy(step, task, ctx):
             raise RuntimeError("intentional")
+
         ex.register_handler("buggy", buggy)
         plan = Plan(goal="x", steps=[PlanStep("s1", "X", "buggy", args={}, max_retries=1)])
         exec_ = await ex.run(TaskSpec(goal="x"), plan, [])
@@ -215,6 +228,7 @@ class TestExecutor:
             if attempt_count["n"] < 2:
                 raise RuntimeError("first try fails")
             return "ok"
+
         ex.register_handler("flaky", flaky)
         plan = Plan(goal="x", steps=[PlanStep("s1", "X", "flaky", args={}, max_retries=2)])
         exec_ = await ex.run(TaskSpec(goal="x"), plan, [])
@@ -224,15 +238,20 @@ class TestExecutor:
     @pytest.mark.asyncio
     async def test_concurrent_independent_steps(self):
         ex = Executor()
+
         async def slow_step(step, task, ctx):
             await asyncio.sleep(0.1)
             return step.id
+
         ex.register_handler("slow", slow_step)
-        plan = Plan(goal="x", steps=[
-            PlanStep("a", "A", "slow"),
-            PlanStep("b", "B", "slow"),
-            PlanStep("c", "C", "slow"),
-        ])
+        plan = Plan(
+            goal="x",
+            steps=[
+                PlanStep("a", "A", "slow"),
+                PlanStep("b", "B", "slow"),
+                PlanStep("c", "C", "slow"),
+            ],
+        )
         started = time.perf_counter()
         exec_ = await ex.run(TaskSpec(goal="x"), plan, [])
         elapsed = time.perf_counter() - started
@@ -249,15 +268,20 @@ class TestExecutor:
             await asyncio.sleep(0.05)
             order.append("a")
             return "A"
+
         async def step_b(step, task, ctx):
             order.append("b")
             return "B"
+
         ex.register_handler("a", step_a)
         ex.register_handler("b", step_b)
-        plan = Plan(goal="x", steps=[
-            PlanStep("b", "B", "b", depends_on=["a"]),
-            PlanStep("a", "A", "a"),
-        ])
+        plan = Plan(
+            goal="x",
+            steps=[
+                PlanStep("b", "B", "b", depends_on=["a"]),
+                PlanStep("a", "A", "a"),
+            ],
+        )
         await ex.run(TaskSpec(goal="x"), plan, [])
         assert order == ["a", "b"]
 
@@ -265,16 +289,22 @@ class TestExecutor:
     @pytest.mark.skipif(True, reason="pytest-asyncio event loop interop; passes standalone")
     async def test_skip_when_dependency_failed(self):
         ex = Executor()
+
         async def fail(step, task, ctx):
             raise RuntimeError("nope")
+
         async def never_runs(step, task, ctx):
             return "should not happen"
+
         ex.register_handler("fail", fail)
         ex.register_handler("never", never_runs)
-        plan = Plan(goal="x", steps=[
-            PlanStep("a", "A", "fail", args={}, max_retries=0),
-            PlanStep("b", "B", "never", depends_on=["a"]),
-        ])
+        plan = Plan(
+            goal="x",
+            steps=[
+                PlanStep("a", "A", "fail", args={}, max_retries=0),
+                PlanStep("b", "B", "never", depends_on=["a"]),
+            ],
+        )
         exec_ = await ex.run(TaskSpec(goal="x"), plan, [])
         assert exec_.steps["a"].status == StepStatus.FAILED
         assert exec_.steps["b"].status == StepStatus.SKIPPED
@@ -291,10 +321,13 @@ class TestOrchestrator:
 
         async def echo(step, task, ctx):
             return f"echo:{step.args.get('goal', task.goal)}"
+
         orch.executor.register_handler("llm.reason", echo)
         orch.executor.register_handler("llm.synthesize", echo)
+
         async def mem_search(step, task, ctx):
             return "memory hit"
+
         orch.executor.register_handler("memory.search", mem_search)
 
         result = await orch.run(TaskSpec(goal="greet me"))
@@ -319,10 +352,13 @@ class TestOrchestrator:
 
         async def empty_mem(step, task, ctx):
             return ""  # empty memory → triggers REPLAN
+
         async def none_reason(step, task, ctx):
             return None  # bad output → REPLAN for this step too
+
         async def ok_synth(step, task, ctx):
             return "ok"
+
         orch.executor.register_handler("memory.search", empty_mem)
         orch.executor.register_handler("llm.reason", none_reason)
         orch.executor.register_handler("llm.synthesize", ok_synth)
@@ -342,9 +378,11 @@ class TestOrchestrator:
         orch = Orchestrator()
         # The default capability handlers route through ik_router
         # (we can't easily intercept, but we can assert the modules are used)
-        import ik_kernel.orchestration.orchestrator as orch_mod
         # Check that the handler source code references ik_router
         import inspect
+
+        import ik_kernel.orchestration.orchestrator as orch_mod
+
         src = inspect.getsource(orch_mod.Orchestrator._cap_llm_reason)
         assert "ik_router" in src
         assert "direct" not in src.lower().replace("directly", "X")  # no direct LLM call

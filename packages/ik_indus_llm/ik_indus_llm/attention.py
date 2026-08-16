@@ -10,8 +10,6 @@ backend (Flash-2 / memory-efficient / math) at runtime.
 """
 
 from __future__ import annotations
-import math
-from typing import Optional, Tuple
 
 import torch
 import torch.nn as nn
@@ -31,6 +29,7 @@ class GroupedQueryAttention(nn.Module):
     - MQA: n_kv_head == 1       (all Q share one K/V — extreme compression)
     - GQA: 1 < n_kv_head < n_head  (the sweet spot)
     """
+
     def __init__(self, cfg: IndusConfig):
         super().__init__()
         assert cfg.n_embd % cfg.n_head == 0
@@ -53,10 +52,10 @@ class GroupedQueryAttention(nn.Module):
         x: torch.Tensor,
         cos: torch.Tensor,
         sin: torch.Tensor,
-        attn_mask: Optional[torch.Tensor] = None,
-        past_kv: Optional[Tuple[torch.Tensor, torch.Tensor]] = None,
+        attn_mask: torch.Tensor | None = None,
+        past_kv: tuple[torch.Tensor, torch.Tensor] | None = None,
         use_cache: bool = False,
-    ) -> Tuple[torch.Tensor, Optional[Tuple[torch.Tensor, torch.Tensor]]]:
+    ) -> tuple[torch.Tensor, tuple[torch.Tensor, torch.Tensor] | None]:
 
         B, T, C = x.shape
         # Project Q, K, V.  `cos/sin` are for the current token positions.
@@ -102,7 +101,9 @@ class GroupedQueryAttention(nn.Module):
                 torch.ones((q_len, q_len), device=q.device, dtype=torch.bool)
             )
         y = F.scaled_dot_product_attention(
-            q, k, v,
+            q,
+            k,
+            v,
             attn_mask=mask,
             is_causal=(mask is None),
             dropout_p=self.dropout if self.training else 0.0,

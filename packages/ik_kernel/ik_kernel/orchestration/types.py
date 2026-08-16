@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
 
@@ -76,7 +76,7 @@ class TaskSpec:
     capabilities: list[str] = field(default_factory=list)
     # Metadata
     metadata: dict = field(default_factory=dict)
-    created_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    created_at: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
 
     def validate(self) -> None:
         if not self.goal.strip():
@@ -112,7 +112,7 @@ class Plan:
     goal: str = ""
     steps: list[PlanStep] = field(default_factory=list)
     version: int = 1
-    created_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    created_at: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
 
     def validate(self) -> None:
         """Validate the plan deterministically.
@@ -133,6 +133,7 @@ class Plan:
                     raise ValueError(f"unknown dependency {d!r} in {s.id!r}")
         # Kahn's cycle detection
         from collections import defaultdict, deque
+
         deps = {s.id: set(s.depends_on) for s in self.steps}
         children: dict[str, set[str]] = defaultdict(set)
         for sid, dset in deps.items():
@@ -153,7 +154,6 @@ class Plan:
     def topological_order(self) -> list[str]:
         """Return step ids in topological order."""
         self.validate()
-        from collections import defaultdict
         deps: dict[str, set[str]] = {s.id: set(s.depends_on) for s in self.steps}
         out: list[str] = []
         while deps:
@@ -190,7 +190,7 @@ class Observation:
     cost_cents: int = 0
     latency_ms: int = 0
     metadata: dict = field(default_factory=dict)
-    timestamp: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    timestamp: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
 
 
 @dataclass
@@ -224,7 +224,7 @@ class Evaluation:
     score: float  # 0.0..1.0
     reason: str = ""
     details: dict = field(default_factory=dict)
-    timestamp: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    timestamp: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
 
 
 @dataclass

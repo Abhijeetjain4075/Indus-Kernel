@@ -2,11 +2,9 @@
 
 from __future__ import annotations
 
-import os
 import time
 
 import pytest
-
 from ik_router.budget import BudgetEnforcer, BudgetExceededError
 from ik_router.cache import SemanticCache
 from ik_router.errors import ConfigurationError
@@ -25,22 +23,38 @@ from ik_router.types import (
 @pytest.fixture(autouse=True)
 def clear_env(monkeypatch):
     for key in [
-        "OPENAI_API_KEY", "ANTHROPIC_API_KEY", "GOOGLE_API_KEY", "AZURE_API_KEY",
-        "COHERE_API_KEY", "MISTRAL_API_KEY", "GROQ_API_KEY", "TOGETHER_API_KEY",
-        "FIREWORKS_API_KEY", "DEEPINFRA_API_KEY", "OPENROUTER_API_KEY", "LITELLM_API_KEY",
+        "OPENAI_API_KEY",
+        "ANTHROPIC_API_KEY",
+        "GOOGLE_API_KEY",
+        "AZURE_API_KEY",
+        "COHERE_API_KEY",
+        "MISTRAL_API_KEY",
+        "GROQ_API_KEY",
+        "TOGETHER_API_KEY",
+        "FIREWORKS_API_KEY",
+        "DEEPINFRA_API_KEY",
+        "OPENROUTER_API_KEY",
+        "LITELLM_API_KEY",
     ]:
         monkeypatch.delenv(key, raising=False)
 
 
 def _checkpoint_exists() -> bool:
     import os.path
-    p = os.path.abspath(os.path.join(
-        os.path.dirname(__import__("ik_router.router").__file__),
-        "..", "..",
-        "ik_indus_llm", "ik_indus_llm",
-        "artifacts", "checkpoints", "pretrain",
-        "indus_tiny_v0.3.0.pt",
-    ))
+
+    p = os.path.abspath(
+        os.path.join(
+            os.path.dirname(__import__("ik_router.router").__file__),
+            "..",
+            "..",
+            "ik_indus_llm",
+            "ik_indus_llm",
+            "artifacts",
+            "checkpoints",
+            "pretrain",
+            "indus_tiny_v0.3.0.pt",
+        )
+    )
     return os.path.isfile(p)
 
 
@@ -53,9 +67,10 @@ class TestConfiguration:
         assert not router.is_configured()
         with pytest.raises(ConfigurationError) as exc_info:
             import asyncio
-            asyncio.run(router.complete(
-                LLMRequest(messages=[Message(role=MessageRole.USER, content="hi")])
-            ))
+
+            asyncio.run(
+                router.complete(LLMRequest(messages=[Message(role=MessageRole.USER, content="hi")]))
+            )
         assert "No LLM backend" in str(exc_info.value) or "API key" in str(exc_info.value)
 
     def test_is_configured_with_api_key(self, monkeypatch):
@@ -84,12 +99,24 @@ class TestPolicyEngine:
     def test_selects_cheapest_capable(self):
         pe = PolicyEngine()
         pe.candidates = [
-            ModelCandidate(model_id="expensive", provider="x", capabilities={"code"},
-                           cost_per_1k_input_cents=1000, cost_per_1k_output_cents=2000,
-                           context_length=8000, priority=5),
-            ModelCandidate(model_id="cheap", provider="x", capabilities={"code"},
-                           cost_per_1k_input_cents=10, cost_per_1k_output_cents=20,
-                           context_length=8000, priority=5),
+            ModelCandidate(
+                model_id="expensive",
+                provider="x",
+                capabilities={"code"},
+                cost_per_1k_input_cents=1000,
+                cost_per_1k_output_cents=2000,
+                context_length=8000,
+                priority=5,
+            ),
+            ModelCandidate(
+                model_id="cheap",
+                provider="x",
+                capabilities={"code"},
+                cost_per_1k_input_cents=10,
+                cost_per_1k_output_cents=20,
+                context_length=8000,
+                priority=5,
+            ),
         ]
         c = pe.select(None, {"code"})
         assert c.model_id == "cheap"
@@ -102,9 +129,15 @@ class TestPolicyEngine:
     def test_all_down_raises(self):
         pe = PolicyEngine()
         pe.candidates = [
-            ModelCandidate(model_id="sick", provider="x", capabilities={"text"},
-                           cost_per_1k_input_cents=10, cost_per_1k_output_cents=20,
-                           context_length=8000, health="down"),
+            ModelCandidate(
+                model_id="sick",
+                provider="x",
+                capabilities={"text"},
+                cost_per_1k_input_cents=10,
+                cost_per_1k_output_cents=20,
+                context_length=8000,
+                health="down",
+            ),
         ]
         with pytest.raises(ValueError, match="no healthy"):
             pe.select(None, {"text"})
@@ -118,9 +151,12 @@ class TestSemanticCache:
             model_hint="gpt-4o-mini",
         )
         response = LLMResponse(
-            model_used="gpt-4o-mini", provider="openai", content="hi",
+            model_used="gpt-4o-mini",
+            provider="openai",
+            content="hi",
             usage=LLMUsage(prompt_tokens=1, completion_tokens=1, total_tokens=2),
-            cost_cents=1, latency_ms=10,
+            cost_cents=1,
+            latency_ms=10,
         )
         cache.set(req, response)
         cached = cache.get(req)
@@ -132,9 +168,12 @@ class TestSemanticCache:
         req1 = LLMRequest(messages=[Message(role=MessageRole.USER, content="x")], temperature=0.0)
         req2 = LLMRequest(messages=[Message(role=MessageRole.USER, content="x")], temperature=1.0)
         response = LLMResponse(
-            model_used="m", provider="p", content="c",
+            model_used="m",
+            provider="p",
+            content="c",
             usage=LLMUsage(prompt_tokens=1, completion_tokens=1, total_tokens=2),
-            cost_cents=0, latency_ms=0,
+            cost_cents=0,
+            latency_ms=0,
         )
         cache.set(req1, response)
         assert cache.get(req2) is None
@@ -143,9 +182,12 @@ class TestSemanticCache:
         cache = SemanticCache()
         req = LLMRequest(messages=[Message(role=MessageRole.USER, content="x")], bypass_cache=True)
         response = LLMResponse(
-            model_used="m", provider="p", content="c",
+            model_used="m",
+            provider="p",
+            content="c",
             usage=LLMUsage(prompt_tokens=1, completion_tokens=1, total_tokens=2),
-            cost_cents=0, latency_ms=0,
+            cost_cents=0,
+            latency_ms=0,
         )
         cache.set(req, response)
         assert cache.get(req) is None
@@ -154,9 +196,12 @@ class TestSemanticCache:
         cache = SemanticCache(default_ttl_s=1)
         req = LLMRequest(messages=[Message(role=MessageRole.USER, content="x")])
         response = LLMResponse(
-            model_used="m", provider="p", content="c",
+            model_used="m",
+            provider="p",
+            content="c",
             usage=LLMUsage(prompt_tokens=1, completion_tokens=1, total_tokens=2),
-            cost_cents=0, latency_ms=0,
+            cost_cents=0,
+            latency_ms=0,
         )
         cache.set(req, response, ttl_s=1)
         entry = list(cache._cache.values())[0]
@@ -216,18 +261,23 @@ class TestTransactionalBudget:
 
     def test_concurrent_reservations_serialized(self):
         import threading
+
         b = BudgetEnforcer()
         b.set_budget("t", 100, 1000)
         results = []
+
         def worker(i):
             try:
                 b.reserve_with_id("t", 10, 50)
                 results.append("ok")
             except BudgetExceededError:
                 results.append("denied")
+
         threads = [threading.Thread(target=worker, args=(i,)) for i in range(20)]
-        for t in threads: t.start()
-        for t in threads: t.join()
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
         # Budget 100, each reserves 10 -> 10 succeed, 10 denied
         assert results.count("ok") == 10
         assert results.count("denied") == 10
@@ -237,15 +287,21 @@ class TestFallbackChain:
     @pytest.mark.asyncio
     async def test_primary_succeeds(self):
         chain = FallbackChain(chain=["m1", "m2", "m3"])
+
         async def call_fn(req, model):
             return LLMResponse(
-                model_used=model, provider="p", content=f"ok from {model}",
+                model_used=model,
+                provider="p",
+                content=f"ok from {model}",
                 usage=LLMUsage(prompt_tokens=1, completion_tokens=1, total_tokens=2),
-                cost_cents=0, latency_ms=0,
+                cost_cents=0,
+                latency_ms=0,
             )
+
         resp = await chain.execute(
             LLMRequest(messages=[Message(role=MessageRole.USER, content="x")]),
-            primary="m1", call_fn=call_fn,
+            primary="m1",
+            call_fn=call_fn,
         )
         assert resp.content == "ok from m1"
 
@@ -253,18 +309,24 @@ class TestFallbackChain:
     async def test_falls_back_on_failure(self):
         chain = FallbackChain(chain=["m1", "m2", "m3"])
         log = []
+
         async def call_fn(req, model):
             log.append(model)
             if model in ("m1", "m2"):
                 raise RuntimeError(f"{model} failed")
             return LLMResponse(
-                model_used=model, provider="p", content=f"ok from {model}",
+                model_used=model,
+                provider="p",
+                content=f"ok from {model}",
                 usage=LLMUsage(prompt_tokens=1, completion_tokens=1, total_tokens=2),
-                cost_cents=0, latency_ms=0,
+                cost_cents=0,
+                latency_ms=0,
             )
+
         resp = await chain.execute(
             LLMRequest(messages=[Message(role=MessageRole.USER, content="x")]),
-            primary="m1", call_fn=call_fn,
+            primary="m1",
+            call_fn=call_fn,
         )
         assert resp.content == "ok from m3"
         assert log == ["m1", "m2", "m3"]

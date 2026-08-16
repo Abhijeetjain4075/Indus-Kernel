@@ -3,7 +3,9 @@
 Usage:
     python -m llm_from_scratch.generate --prompt "Once upon a time" --max_new_tokens 500
 """
+
 import argparse
+
 from .generate import generate
 
 

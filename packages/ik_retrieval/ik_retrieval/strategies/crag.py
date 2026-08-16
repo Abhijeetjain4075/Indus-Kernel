@@ -25,7 +25,6 @@ from ik_retrieval.types import (
 from ik_router.router import get_router
 from ik_router.types import LLMRequest, Message, MessageRole
 
-
 _GRADE_PROMPT = """Grade the CHUNK's relevance to the QUESTION. Reply with exactly one of:
 - CORRECT: directly answers the question
 - AMBIGUOUS: on-topic but does not fully answer
@@ -56,8 +55,16 @@ class CorrectiveRAG:
             resp = await router.complete(
                 LLMRequest(
                     messages=[
-                        Message(role=MessageRole.SYSTEM, content="You grade chunk relevance. Reply with one of: CORRECT, AMBIGUOUS, INCORRECT."),
-                        Message(role=MessageRole.USER, content=_GRADE_PROMPT.format(question=question, chunk=chunk.content[:1000])),
+                        Message(
+                            role=MessageRole.SYSTEM,
+                            content="You grade chunk relevance. Reply with one of: CORRECT, AMBIGUOUS, INCORRECT.",
+                        ),
+                        Message(
+                            role=MessageRole.USER,
+                            content=_GRADE_PROMPT.format(
+                                question=question, chunk=chunk.content[:1000]
+                            ),
+                        ),
                     ],
                     capability_requirements=["text"],
                     temperature=0.0,
@@ -70,8 +77,9 @@ class CorrectiveRAG:
             if "AMBIGUOUS" in v:
                 return "AMBIGUOUS"
             return "INCORRECT"
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             import logging
+
             logging.warning(f"crag: grade failed ({e}); treating chunk as AMBIGUOUS")
             return "AMBIGUOUS"
 
@@ -105,7 +113,7 @@ class CorrectiveRAG:
                             rationale="crag: web fallback",
                         )
                     )
-            except Exception:  # noqa: BLE001
+            except Exception:
                 pass
         kept.sort(key=lambda x: x.score, reverse=True)
         top = kept[: query.top_k]

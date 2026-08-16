@@ -14,7 +14,6 @@ from ik_reasoning.types import ReasoningRequest, ReasoningResult, ReasoningStep,
 from ik_router.router import get_router
 from ik_router.types import LLMRequest, Message, MessageRole
 
-
 _REACT_PROMPT = """Solve the question by alternating Thought, Action, and Observation.
 
 Use the format:
@@ -35,7 +34,11 @@ class ReAct(BaseReasoningStrategy):
     async def reason(self, req: ReasoningRequest) -> ReasoningResult:
         started = time.perf_counter()
         router = get_router()
-        tool_names = ", ".join(t.get("name", "?") for t in req.tools) if req.tools else "(no tools available)"
+        tool_names = (
+            ", ".join(t.get("name", "?") for t in req.tools)
+            if req.tools
+            else "(no tools available)"
+        )
         steps: list[ReasoningStep] = []
         scratchpad = ""
         answer = ""
@@ -43,11 +46,16 @@ class ReAct(BaseReasoningStrategy):
         total_cost = 0
 
         for i in range(req.max_steps):
-            prompt = _REACT_PROMPT.format(question=req.question, scratchpad=scratchpad, tool_names=tool_names)
+            prompt = _REACT_PROMPT.format(
+                question=req.question, scratchpad=scratchpad, tool_names=tool_names
+            )
             resp = await router.complete(
                 LLMRequest(
                     messages=[
-                        Message(role=MessageRole.SYSTEM, content="You solve problems using Thought/Action/Observation."),
+                        Message(
+                            role=MessageRole.SYSTEM,
+                            content="You solve problems using Thought/Action/Observation.",
+                        ),
                         Message(role=MessageRole.USER, content=prompt),
                     ],
                     model_hint=req.model_hint,
@@ -61,8 +69,14 @@ class ReAct(BaseReasoningStrategy):
             text = resp.content
 
             # Parse
-            thought_m = re.search(r"Thought:\s*(.+?)(?=\n(?:Action|Final Answer|$))", text, re.DOTALL)
-            action_m = re.search(r"Action:\s*(\S+)\s+with input\s+(.+?)(?=\n(?:Observation|Final Answer|$))", text, re.DOTALL)
+            thought_m = re.search(
+                r"Thought:\s*(.+?)(?=\n(?:Action|Final Answer|$))", text, re.DOTALL
+            )
+            action_m = re.search(
+                r"Action:\s*(\S+)\s+with input\s+(.+?)(?=\n(?:Observation|Final Answer|$))",
+                text,
+                re.DOTALL,
+            )
             final_m = re.search(r"Final Answer:\s*(.+?)$", text, re.DOTALL)
 
             if thought_m:
@@ -100,8 +114,13 @@ class ReAct(BaseReasoningStrategy):
     async def _invoke_tool(self, tools: list[dict], name: str, args_raw: str) -> str:
         """Invoke a real tool. If the tool is registered, call it; else return an error message."""
         import json
+
         try:
-            args = json.loads(args_raw) if args_raw.strip().startswith(("{", "[")) else {"raw": args_raw}
+            args = (
+                json.loads(args_raw)
+                if args_raw.strip().startswith(("{", "["))
+                else {"raw": args_raw}
+            )
         except json.JSONDecodeError:
             args = {"raw": args_raw}
         for t in tools:
@@ -109,11 +128,12 @@ class ReAct(BaseReasoningStrategy):
                 try:
                     result = await t["fn"](args) if asyncio_is_coroutine(t["fn"]) else t["fn"](args)
                     return str(result)
-                except Exception as e:  # noqa: BLE001
+                except Exception as e:
                     return f"error: {e}"
         return f"error: tool '{name}' not found"
 
 
 def asyncio_is_coroutine(fn) -> bool:
     import inspect
+
     return inspect.iscoroutinefunction(fn)

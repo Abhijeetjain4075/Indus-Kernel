@@ -7,7 +7,7 @@ from ik_planning import Plan,PlanStep
 from ik_router.budget import BudgetEnforcer,BudgetExceededError
 
 def test_settings_are_injected_not_global():
-    s=Settings(environment="production",api_keys="kid:secret:tenant:admin:*",jwt_secret="x"*64,api_cors_origins=["https://example.com"],api_allowed_hosts=["example.com"],neo4j_password="secure")
+    s=Settings(environment="production",debug=False,api_keys="kid:secret:tenant:admin:*",jwt_secret="x"*64,api_cors_origins=["https://example.com"],api_allowed_hosts=["example.com"],neo4j_password="secure")
     app=create_app(s); assert app.state.settings is s
     try:get_current_principal(settings=s)
     except HTTPException as e: assert e.status_code==401

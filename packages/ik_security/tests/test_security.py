@@ -1,4 +1,5 @@
 """Real tests for ik_security."""
+
 from ik_security import Capability, authorize, constant_time_equal, fingerprint, generate_token
 
 

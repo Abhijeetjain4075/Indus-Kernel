@@ -18,7 +18,9 @@ import sys
 def cmd_dev(args: argparse.Namespace) -> int:
     """Start the kernel in development mode."""
     import uvicorn
+
     from ik_kernel.config import get_settings
+
     settings = get_settings()
     uvicorn.run(
         "ik_kernel.app:app",
@@ -33,8 +35,9 @@ def cmd_dev(args: argparse.Namespace) -> int:
 
 def cmd_version(_: argparse.Namespace) -> int:
     """Print the kernel version."""
-    from ik_kernel.version import __version__
     from ik_kernel.config import get_settings
+    from ik_kernel.version import __version__
+
     s = get_settings()
     print(f"indus-kernel {__version__}")
     print(f"environment: {s.environment}")
@@ -45,7 +48,9 @@ def cmd_version(_: argparse.Namespace) -> int:
 def cmd_hello(_: argparse.Namespace) -> int:
     """Call the hello-world agent via the running kernel."""
     import httpx
+
     from ik_kernel.config import get_settings
+
     s = get_settings()
     url = f"http://{s.api_host}:{s.api_port}{s.api_prefix}/agents/runs"
     r = httpx.post(url, json={"goal": "Hello from the Indus Kernel CLI!"}, timeout=30.0)
@@ -63,6 +68,7 @@ def cmd_shell(_: argparse.Namespace) -> int:
         return 1
     from ik_kernel.app import app
     from ik_kernel.config import get_settings
+
     IPython.embed(
         header="Indus Kernel interactive shell. `app`, `get_settings()` available.",
         user_ns={"app": app, "get_settings": get_settings},
@@ -73,6 +79,7 @@ def cmd_shell(_: argparse.Namespace) -> int:
 def cmd_migrate(args: argparse.Namespace) -> int:
     """Run database migrations."""
     import subprocess
+
     cmd = ["alembic", "upgrade", "head" if not args.downgrade else "base"]
     return subprocess.call(cmd)
 

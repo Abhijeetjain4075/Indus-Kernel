@@ -16,7 +16,6 @@ from ik_reasoning.types import ReasoningRequest, ReasoningResult, ReasoningStep,
 from ik_router.router import get_router
 from ik_router.types import LLMRequest, Message, MessageRole
 
-
 _PERSONA_PROMPT = """Suggest 3 expert personas who would be well-suited to answer the question. Each persona is described in 1 sentence. Number them 1, 2, 3.
 
 Question: {question}
@@ -50,13 +49,16 @@ class MetaPrompting(BaseReasoningStrategy):
             LLMRequest(
                 messages=[
                     Message(role=MessageRole.SYSTEM, content="You design expert personas."),
-                    Message(role=MessageRole.USER, content=_PERSONA_PROMPT.format(question=req.question)),
+                    Message(
+                        role=MessageRole.USER, content=_PERSONA_PROMPT.format(question=req.question)
+                    ),
                 ],
                 capability_requirements=["text"],
                 temperature=0.5,
             )
         )
         import re
+
         personas: list[str] = []
         for ln in personas_resp.content.split("\n"):
             m = re.match(r"^\d+[\.\)]\s+(.+)", ln.strip())
@@ -65,20 +67,28 @@ class MetaPrompting(BaseReasoningStrategy):
         if len(personas) < 3:
             personas = (personas + ["domain expert", "practitioner", "researcher"])[:3]
 
-        steps: list[ReasoningStep] = [ReasoningStep(type="plan", content=personas_resp.content, metadata={"personas": personas})]
+        steps: list[ReasoningStep] = [
+            ReasoningStep(
+                type="plan", content=personas_resp.content, metadata={"personas": personas}
+            )
+        ]
 
         # 2. Each persona answers in parallel
         async def ask(p: str) -> str:
             resp = await router.complete(
                 LLMRequest(
                     messages=[
-                        Message(role=MessageRole.SYSTEM, content=_PERSONA_ANSWER_PROMPT.format(persona=p, question=req.question)),
+                        Message(
+                            role=MessageRole.SYSTEM,
+                            content=_PERSONA_ANSWER_PROMPT.format(persona=p, question=req.question),
+                        ),
                     ],
                     capability_requirements=["text"],
                     temperature=req.temperature,
                 )
             )
             return resp.content.strip()
+
         answers = await asyncio.gather(*[ask(p) for p in personas])
         for p, a in zip(personas, answers):
             steps.append(ReasoningStep(type="thought", content=f"[{p}] {a}"))
@@ -88,10 +98,18 @@ class MetaPrompting(BaseReasoningStrategy):
             LLMRequest(
                 messages=[
                     Message(role=MessageRole.SYSTEM, content="You synthesize expert answers."),
-                    Message(role=MessageRole.USER, content=_SYNTHESIZE_PROMPT.format(
-                        question=req.question, p1=personas[0], a1=answers[0],
-                        p2=personas[1], a2=answers[1], p3=personas[2], a3=answers[2],
-                    )),
+                    Message(
+                        role=MessageRole.USER,
+                        content=_SYNTHESIZE_PROMPT.format(
+                            question=req.question,
+                            p1=personas[0],
+                            a1=answers[0],
+                            p2=personas[1],
+                            a2=answers[1],
+                            p3=personas[2],
+                            a3=answers[2],
+                        ),
+                    ),
                 ],
                 capability_requirements=["text"],
                 temperature=0.0,
@@ -106,5 +124,5 @@ class MetaPrompting(BaseReasoningStrategy):
             took_ms=int((time.perf_counter() - started) * 1000),
             total_tokens=syn_resp.usage.total_tokens + personas_resp.usage.total_tokens,
             total_cost_cents=syn_resp.cost_cents + personas_resp.cost_cents,
-            rationale=f"meta-prompting: 3 personas synthesized",
+            rationale="meta-prompting: 3 personas synthesized",
         )

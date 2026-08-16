@@ -24,19 +24,21 @@ production.
 """
 
 from __future__ import annotations
+
 import hashlib
 import json
 import re
 import time
 import unicodedata
-from dataclasses import dataclass, field, asdict
+from collections.abc import Callable
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple
-
+from typing import Any
 
 # ---------------------------------------------------------------------------
 # A record
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class Record:
@@ -46,7 +48,7 @@ class Record:
     license: str
     language: str = "en"
     quality: float = 1.0
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
     content_hash: str = ""
 
     def __post_init__(self):
@@ -58,24 +60,27 @@ class Record:
 # Pipeline stages
 # ---------------------------------------------------------------------------
 
-Stage = Callable[[List[Record]], List[Record]]
+Stage = Callable[[list[Record]], list[Record]]
 
 
-def stage_source_validation(allow_sources: Set[str]) -> Stage:
-    def _f(records: List[Record]) -> List[Record]:
+def stage_source_validation(allow_sources: set[str]) -> Stage:
+    def _f(records: list[Record]) -> list[Record]:
         return [r for r in records if r.source in allow_sources]
+
     return _f
 
 
-def stage_license_check(allowed_licenses: Set[str]) -> Stage:
-    def _f(records: List[Record]) -> List[Record]:
+def stage_license_check(allowed_licenses: set[str]) -> Stage:
+    def _f(records: list[Record]) -> list[Record]:
         return [r for r in records if r.license in allowed_licenses]
+
     return _f
 
 
 def stage_format_normalization() -> Stage:
     """Unicode normalize, strip control chars, collapse whitespace."""
-    def _f(records: List[Record]) -> List[Record]:
+
+    def _f(records: list[Record]) -> list[Record]:
         out = []
         for r in records:
             t = unicodedata.normalize("NFKC", r.text)
@@ -88,12 +93,14 @@ def stage_format_normalization() -> Stage:
                 r.content_hash = hashlib.sha256(r.text.encode("utf-8")).hexdigest()
                 out.append(r)
         return out
+
     return _f
 
 
 def stage_corruption_filter(min_chars: int = 20, max_ratio_punct: float = 0.5) -> Stage:
     """Drop too-short records and records with too many punctuation characters."""
-    def _f(records: List[Record]) -> List[Record]:
+
+    def _f(records: list[Record]) -> list[Record]:
         out = []
         for r in records:
             if len(r.text) < min_chars:
@@ -106,6 +113,7 @@ def stage_corruption_filter(min_chars: int = 20, max_ratio_punct: float = 0.5) -
                 continue
             out.append(r)
         return out
+
     return _f
 
 
@@ -114,6 +122,7 @@ def stage_quality_scoring(min_quality: float = 0.3) -> Stage:
 
     Heuristic: penalize very short, very repetitive, or mostly-uppercase text.
     """
+
     def score(r: Record) -> float:
         t = r.text
         n = len(t)
@@ -126,17 +135,20 @@ def stage_quality_scoring(min_quality: float = 0.3) -> Stage:
         upper = sum(1 for c in t if c.isupper()) / max(1, sum(1 for c in t if c.isalpha()))
         s = 0.4 * rep + 0.4 * min(1.0, n / 1000) + 0.2 * (1 - abs(upper - 0.05))
         return float(max(0.0, min(1.0, s)))
-    def _f(records: List[Record]) -> List[Record]:
+
+    def _f(records: list[Record]) -> list[Record]:
         for r in records:
             r.quality = score(r)
         return [r for r in records if r.quality >= min_quality]
+
     return _f
 
 
 def stage_dedup_exact() -> Stage:
     """Drop records with duplicate content_hash."""
-    seen: Set[str] = set()
-    def _f(records: List[Record]) -> List[Record]:
+    seen: set[str] = set()
+
+    def _f(records: list[Record]) -> list[Record]:
         out = []
         for r in records:
             if r.content_hash in seen:
@@ -144,6 +156,7 @@ def stage_dedup_exact() -> Stage:
             seen.add(r.content_hash)
             out.append(r)
         return out
+
     return _f
 
 
@@ -154,16 +167,19 @@ def stage_dedup_near(minhash_bands: int = 4, jaccard_threshold: float = 0.85) ->
     working naive shingle-Jaccard implementation that scales to ~10K
     records; for millions swap in MinHash LSH.
     """
-    def shingles(s: str, k: int = 5) -> Set[str]:
+
+    def shingles(s: str, k: int = 5) -> set[str]:
         s = re.sub(r"\s+", " ", s)
-        return set(s[i:i + k] for i in range(0, max(1, len(s) - k + 1), 1))
-    def jaccard(a: Set, b: Set) -> float:
+        return set(s[i : i + k] for i in range(0, max(1, len(s) - k + 1), 1))
+
+    def jaccard(a: set, b: set) -> float:
         if not a or not b:
             return 0.0
         inter = len(a & b)
         union = len(a | b)
         return inter / union
-    def _f(records: List[Record]) -> List[Record]:
+
+    def _f(records: list[Record]) -> list[Record]:
         shingle_cache = [shingles(r.text) for r in records]
         keep = [True] * len(records)
         for i in range(len(records)):
@@ -175,22 +191,27 @@ def stage_dedup_near(minhash_bands: int = 4, jaccard_threshold: float = 0.85) ->
                 if jaccard(shingle_cache[i], shingle_cache[j]) >= jaccard_threshold:
                     keep[j] = False
         return [r for r, k in zip(records, keep) if k]
+
     return _f
 
 
-def stage_split(train_frac: float = 0.9, val_frac: float = 0.05, seed: int = 1337) -> Callable[[List[Record]], Tuple[List[Record], List[Record], List[Record]]]:
+def stage_split(
+    train_frac: float = 0.9, val_frac: float = 0.05, seed: int = 1337
+) -> Callable[[list[Record]], tuple[list[Record], list[Record], list[Record]]]:
     """Deterministic train/val/test split (last split is test)."""
     import random
-    def _f(records: List[Record]) -> Tuple[List[Record], List[Record], List[Record]]:
+
+    def _f(records: list[Record]) -> tuple[list[Record], list[Record], list[Record]]:
         rng = random.Random(seed)
         idx = list(range(len(records)))
         rng.shuffle(idx)
         n_train = int(train_frac * len(records))
         n_val = int(val_frac * len(records))
         train = [records[i] for i in idx[:n_train]]
-        val = [records[i] for i in idx[n_train:n_train + n_val]]
-        test = [records[i] for i in idx[n_train + n_val:]]
+        val = [records[i] for i in idx[n_train : n_train + n_val]]
+        test = [records[i] for i in idx[n_train + n_val :]]
         return train, val, test
+
     return _f
 
 
@@ -198,35 +219,37 @@ def stage_split(train_frac: float = 0.9, val_frac: float = 0.05, seed: int = 133
 # Versioned dataset
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class DatasetVersion:
     name: str
     version: str
     path: str
     num_records: int
-    num_tokens: Optional[int]
+    num_tokens: int | None
     created_at: float
-    source_mix: Dict[str, int]
-    license_mix: Dict[str, int]
-    quality_stats: Dict[str, float]
+    source_mix: dict[str, int]
+    license_mix: dict[str, int]
+    quality_stats: dict[str, float]
     content_hash: str
-    parent_version: Optional[str] = None
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    parent_version: str | None = None
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 class DataPipeline:
     """Run the full pipeline and produce an immutable DatasetVersion."""
+
     def __init__(self, root: str = "data_store", name: str = "indus-corpus"):
         self.root = Path(root)
         self.root.mkdir(parents=True, exist_ok=True)
         self.name = name
-        self.versions: List[DatasetVersion] = []
+        self.versions: list[DatasetVersion] = []
 
     def run(
         self,
-        records: List[Record],
-        tokenizer_encode: Optional[Callable[[str], List[int]]] = None,
-        stages: Optional[List[Stage]] = None,
+        records: list[Record],
+        tokenizer_encode: Callable[[str], list[int]] | None = None,
+        stages: list[Stage] | None = None,
         split: bool = True,
         token_chunk_chars: int = 1_000_000,
     ) -> DatasetVersion:
@@ -247,9 +270,9 @@ class DataPipeline:
         if tokenizer_encode is not None:
             num_tokens = sum(len(tokenizer_encode(r.text)) for r in records)
         # Source / license / quality stats
-        source_mix: Dict[str, int] = {}
-        license_mix: Dict[str, int] = {}
-        qualities: List[float] = []
+        source_mix: dict[str, int] = {}
+        license_mix: dict[str, int] = {}
+        qualities: list[float] = []
         for r in records:
             source_mix[r.source] = source_mix.get(r.source, 0) + 1
             license_mix[r.license] = license_mix.get(r.license, 0) + 1
@@ -297,5 +320,5 @@ class DataPipeline:
             f.write(json.dumps(asdict(ver)) + "\n")
         return ver
 
-    def latest(self) -> Optional[DatasetVersion]:
+    def latest(self) -> DatasetVersion | None:
         return self.versions[-1] if self.versions else None

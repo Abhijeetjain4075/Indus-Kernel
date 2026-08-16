@@ -1,4 +1,5 @@
 """FastAPI dependency injection and authentication boundaries."""
+
 from __future__ import annotations
 
 import uuid
@@ -6,29 +7,50 @@ from typing import Annotated
 
 from fastapi import Depends, Header, HTTPException, status
 from pydantic import BaseModel, Field
+
 try:
     from jose import JWTError, jwt
 except ImportError:
-    import base64, hashlib, hmac, json, time
-    class JWTError(Exception): pass
+    import base64
+    import hashlib
+    import hmac
+    import json
+    import time
+
+    class JWTError(Exception):
+        pass
+
     class _JWT:
         @staticmethod
         def decode(token, secret, algorithms=None, audience=None, issuer=None):
             try:
-                h,p,s=token.split("."); sig=base64.urlsafe_b64encode(hmac.new(secret.encode(),f"{h}.{p}".encode(),hashlib.sha256).digest()).rstrip(b"=").decode()
-                if not hmac.compare_digest(sig,s): raise JWTError("bad signature")
-                claims=json.loads(base64.urlsafe_b64decode(p+"="*((4-len(p)%4)%4)))
-                if claims.get("exp",time.time()+1)<time.time(): raise JWTError("expired")
-                if audience and claims.get("aud")!=audience: raise JWTError("audience")
-                if issuer and claims.get("iss")!=issuer: raise JWTError("issuer")
+                h, p, s = token.split(".")
+                sig = (
+                    base64.urlsafe_b64encode(
+                        hmac.new(secret.encode(), f"{h}.{p}".encode(), hashlib.sha256).digest()
+                    )
+                    .rstrip(b"=")
+                    .decode()
+                )
+                if not hmac.compare_digest(sig, s):
+                    raise JWTError("bad signature")
+                claims = json.loads(base64.urlsafe_b64decode(p + "=" * ((4 - len(p) % 4) % 4)))
+                if claims.get("exp", time.time() + 1) < time.time():
+                    raise JWTError("expired")
+                if audience and claims.get("aud") != audience:
+                    raise JWTError("audience")
+                if issuer and claims.get("iss") != issuer:
+                    raise JWTError("issuer")
                 return claims
             except Exception as exc:
-                if isinstance(exc,JWTError): raise
+                if isinstance(exc, JWTError):
+                    raise
                 raise JWTError("invalid token") from exc
-    jwt=_JWT()
+
+    jwt = _JWT()
 
 from ik_kernel.config import Settings, get_settings
-from ik_kernel.security import ApiPrincipal, authenticate_api_key
+from ik_kernel.security import authenticate_api_key
 
 
 def get_request_id() -> str:
@@ -76,18 +98,42 @@ def get_current_principal(
         # Prefer short-lived JWTs; accept API keys directly for service-to-service calls.
         try:
             if settings.jwt_secret and credential.count(".") == 2:
-                claims = jwt.decode(credential, settings.jwt_secret, algorithms=["HS256"], audience="indus-kernel", issuer=settings.app_name)
-                principal = Principal(tenant_id=claims["tenant_id"], api_key_id=claims.get("sub"), roles=claims.get("roles", []), scopes=claims.get("scopes", []), user_id=claims.get("user_id"))
+                claims = jwt.decode(
+                    credential,
+                    settings.jwt_secret,
+                    algorithms=["HS256"],
+                    audience="indus-kernel",
+                    issuer=settings.app_name,
+                )
+                principal = Principal(
+                    tenant_id=claims["tenant_id"],
+                    api_key_id=claims.get("sub"),
+                    roles=claims.get("roles", []),
+                    scopes=claims.get("scopes", []),
+                    user_id=claims.get("user_id"),
+                )
         except (JWTError, KeyError):
             principal = None
         if principal is None:
             raw = authenticate_api_key(credential, settings)
             if raw is not None:
-                principal = Principal(tenant_id=raw.tenant_id, user_id=raw.user_id, api_key_id=raw.key_id, roles=sorted(raw.roles), scopes=sorted(raw.scopes))
+                principal = Principal(
+                    tenant_id=raw.tenant_id,
+                    user_id=raw.user_id,
+                    api_key_id=raw.key_id,
+                    roles=sorted(raw.roles),
+                    scopes=sorted(raw.scopes),
+                )
     if principal is None:
         if require:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="authentication_required", headers={"WWW-Authenticate": "Bearer"})
-        return Principal(tenant_id=x_tenant_id or settings.default_tenant_id, roles=["admin"], scopes=["*"])
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="authentication_required",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        return Principal(
+            tenant_id=x_tenant_id or settings.default_tenant_id, roles=["admin"], scopes=["*"]
+        )
     if x_tenant_id and x_tenant_id != principal.tenant_id and "admin" not in principal.roles:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="tenant_mismatch")
     return principal
@@ -101,12 +147,17 @@ def require_admin(principal: Annotated[Principal, Depends(get_current_principal)
 
 def get_db_session():
     from ik_kernel.db import get_db_session as _get
+
     return _get()
+
 
 def get_event_bus():
     from ik_kernel.eventbus import get_event_bus as _get
+
     return _get()
+
 
 def get_tracer():
     from ik_kernel.observability import get_tracer as _get
+
     return _get()

@@ -10,7 +10,6 @@ from __future__ import annotations
 import os
 
 import pytest
-
 from ik_reasoning.engine import ReasoningEngine
 from ik_reasoning.types import ReasoningRequest, ReasoningStrategy
 
@@ -27,9 +26,19 @@ class TestEngine:
         assert len(s) == 13
         names = {x["name"] for x in s}
         expected = {
-            "zero_shot", "few_shot", "cot", "self_consistency", "tot", "got",
-            "react", "reflexion", "llm_compiler", "test_time_compute",
-            "plan_and_solve", "decom_prompting", "meta_prompting",
+            "zero_shot",
+            "few_shot",
+            "cot",
+            "self_consistency",
+            "tot",
+            "got",
+            "react",
+            "reflexion",
+            "llm_compiler",
+            "test_time_compute",
+            "plan_and_solve",
+            "decom_prompting",
+            "meta_prompting",
         }
         assert names == expected
 
@@ -47,41 +56,49 @@ class TestLLMStrategies:
     @pytest.mark.asyncio
     async def test_zero_shot(self):
         e = ReasoningEngine()
-        result = await e.reason(ReasoningRequest(
-            question="What is 2+2? Answer with one word.",
-            strategy=ReasoningStrategy.ZERO_SHOT,
-        ))
+        result = await e.reason(
+            ReasoningRequest(
+                question="What is 2+2? Answer with one word.",
+                strategy=ReasoningStrategy.ZERO_SHOT,
+            )
+        )
         assert result.answer
         assert result.total_tokens > 0
 
     @pytest.mark.asyncio
     async def test_cot(self):
         e = ReasoningEngine()
-        result = await e.reason(ReasoningRequest(
-            question="If a train leaves at 9am going 60mph, and another at 10am going 80mph in the same direction, when does the second catch up? Think step by step.",
-            strategy=ReasoningStrategy.COT,
-        ))
+        result = await e.reason(
+            ReasoningRequest(
+                question="If a train leaves at 9am going 60mph, and another at 10am going 80mph in the same direction, when does the second catch up? Think step by step.",
+                strategy=ReasoningStrategy.COT,
+            )
+        )
         assert result.answer
         assert any(s.type == "thought" for s in result.steps)
 
     @pytest.mark.asyncio
     async def test_plan_and_solve(self):
         e = ReasoningEngine()
-        result = await e.reason(ReasoningRequest(
-            question="A shop has 12 apples. They sell 3, then buy 8 more, then sell 5. How many?",
-            strategy=ReasoningStrategy.PLAN_AND_SOLVE,
-        ))
+        result = await e.reason(
+            ReasoningRequest(
+                question="A shop has 12 apples. They sell 3, then buy 8 more, then sell 5. How many?",
+                strategy=ReasoningStrategy.PLAN_AND_SOLVE,
+            )
+        )
         assert result.answer
         assert any(s.type == "plan" for s in result.steps)
 
     @pytest.mark.asyncio
     async def test_self_consistency(self):
         e = ReasoningEngine()
-        result = await e.reason(ReasoningRequest(
-            question="What is 5 + 7?",
-            strategy=ReasoningStrategy.SELF_CONSISTENCY,
-            n_samples=3,
-        ))
+        result = await e.reason(
+            ReasoningRequest(
+                question="What is 5 + 7?",
+                strategy=ReasoningStrategy.SELF_CONSISTENCY,
+                n_samples=3,
+            )
+        )
         assert result.answer
         assert result.n_samples == 3
         # Should agree (math is deterministic)
@@ -90,20 +107,24 @@ class TestLLMStrategies:
     @pytest.mark.asyncio
     async def test_decom_prompting(self):
         e = ReasoningEngine()
-        result = await e.reason(ReasoningRequest(
-            question="Compare and contrast TCP and UDP.",
-            strategy=ReasoningStrategy.DECOM_PROMPTING,
-        ))
+        result = await e.reason(
+            ReasoningRequest(
+                question="Compare and contrast TCP and UDP.",
+                strategy=ReasoningStrategy.DECOM_PROMPTING,
+            )
+        )
         assert result.answer
         assert any(s.type == "plan" for s in result.steps)
 
     @pytest.mark.asyncio
     async def test_meta_prompting(self):
         e = ReasoningEngine()
-        result = await e.reason(ReasoningRequest(
-            question="What are the best practices for designing RESTful APIs?",
-            strategy=ReasoningStrategy.META_PROMPTING,
-        ))
+        result = await e.reason(
+            ReasoningRequest(
+                question="What are the best practices for designing RESTful APIs?",
+                strategy=ReasoningStrategy.META_PROMPTING,
+            )
+        )
         assert result.answer
         plan_step = next(s for s in result.steps if s.type == "plan")
         assert "personas" in plan_step.metadata

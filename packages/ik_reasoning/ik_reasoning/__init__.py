@@ -24,30 +24,32 @@ Reference strategies:
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Callable, Literal
+from typing import Literal
+
+from ik_reasoning.engine import ReasoningEngine, get_engine
+from ik_reasoning.strategies.cot import ChainOfThought
+from ik_reasoning.strategies.decom_prompting import DecomposedPrompting
+from ik_reasoning.strategies.few_shot import FewShot
+from ik_reasoning.strategies.got import GraphOfThoughts
+from ik_reasoning.strategies.llm_compiler import LLMCompiler
+from ik_reasoning.strategies.meta_prompting import MetaPrompting
+from ik_reasoning.strategies.plan_and_solve import PlanAndSolve
+from ik_reasoning.strategies.react import ReAct
+from ik_reasoning.strategies.reflexion import Reflexion
+from ik_reasoning.strategies.self_consistency import SelfConsistency
+from ik_reasoning.strategies.test_time_compute import TestTimeCompute
+from ik_reasoning.strategies.tot import TreeOfThoughts
+from ik_reasoning.strategies.zero_shot import ZeroShot
 
 # Re-export the rich engine
 from ik_reasoning.types import (
     ReasoningRequest,
     ReasoningResult as RichReasoningResult,
-    ReasoningStrategy,
     ReasoningStep,
+    ReasoningStrategy,
 )
-from ik_reasoning.engine import ReasoningEngine, get_engine
-from ik_reasoning.strategies.zero_shot import ZeroShot
-from ik_reasoning.strategies.cot import ChainOfThought
-from ik_reasoning.strategies.self_consistency import SelfConsistency
-from ik_reasoning.strategies.tot import TreeOfThoughts
-from ik_reasoning.strategies.got import GraphOfThoughts
-from ik_reasoning.strategies.react import ReAct
-from ik_reasoning.strategies.reflexion import Reflexion
-from ik_reasoning.strategies.llm_compiler import LLMCompiler
-from ik_reasoning.strategies.test_time_compute import TestTimeCompute
-from ik_reasoning.strategies.plan_and_solve import PlanAndSolve
-from ik_reasoning.strategies.decom_prompting import DecomposedPrompting
-from ik_reasoning.strategies.meta_prompting import MetaPrompting
-from ik_reasoning.strategies.few_shot import FewShot
 
 
 # ---------------------------------------------------------------------------
@@ -100,7 +102,9 @@ def reason(
         steps = ["parse_constraints", "solve", "verify"]
     verified = bool(verifier(p)) if verifier is not None else False
     confidence = 1.0 if verified else 0.5
-    return ReasoningResult(strategy=chosen, conclusion=p, steps=steps, confidence=confidence, verified=verified)
+    return ReasoningResult(
+        strategy=chosen, conclusion=p, steps=steps, confidence=confidence, verified=verified
+    )
 
 
 __all__ = [

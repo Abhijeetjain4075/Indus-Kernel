@@ -13,31 +13,32 @@ a sparse MoE FFN.
 """
 
 from __future__ import annotations
+
 import math
 from dataclasses import dataclass
-from typing import Optional, Tuple
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from .attention import GroupedQueryAttention
 from .config import IndusConfig
+from .moe import DenseFFN, MoE
 from .norms import RMSNorm
 from .rope import precompute_rope_cache
-from .attention import GroupedQueryAttention
-from .moe import MoE, DenseFFN
 
 
 @dataclass
 class ForwardOutput:
     logits: torch.Tensor
-    loss: Optional[torch.Tensor] = None
-    aux_loss: Optional[torch.Tensor] = None    # MoE load-balancing loss
-    last_router_logits: Optional[torch.Tensor] = None  # for kernel introspection
+    loss: torch.Tensor | None = None
+    aux_loss: torch.Tensor | None = None  # MoE load-balancing loss
+    last_router_logits: torch.Tensor | None = None  # for kernel introspection
 
 
 class IndusBlock(nn.Module):
     """A single transformer block: pre-norm attention + pre-norm FFN."""
+
     def __init__(self, cfg: IndusConfig):
         super().__init__()
         self.attn_norm = RMSNorm(cfg.n_embd)
@@ -56,7 +57,7 @@ class IndusBlock(nn.Module):
         sin: torch.Tensor,
         past_kv=None,
         use_cache: bool = False,
-    ) -> Tuple[torch.Tensor, torch.Tensor, object]:
+    ) -> tuple[torch.Tensor, torch.Tensor, object]:
         # Attention with residual
         attn_out, new_kv = self.attn(
             self.attn_norm(x), cos, sin, past_kv=past_kv, use_cache=use_cache
@@ -76,6 +77,7 @@ class Indus(nn.Module):
     Generate signature:
         generate(idx, max_new_tokens, temperature, top_k, top_p)
     """
+
     def __init__(self, cfg: IndusConfig):
         super().__init__()
         self.cfg = cfg
@@ -104,15 +106,18 @@ class Indus(nn.Module):
             nn.init.normal_(m.weight, mean=0.0, std=self.cfg.init_std)
 
     def _get_rope(self, T: int, device, dtype):
-        if (self._rope_cache is None
-                or self._rope_cache[0].shape[0] < T
-                or self._rope_cache[0].device != device
-                or self._rope_cache[0].dtype != dtype):
+        if (
+            self._rope_cache is None
+            or self._rope_cache[0].shape[0] < T
+            or self._rope_cache[0].device != device
+            or self._rope_cache[0].dtype != dtype
+        ):
             cos, sin = precompute_rope_cache(
                 self.cfg.head_dim(),
                 max(T, self.cfg.block_size),
                 self.cfg.rope_theta,
-                device, dtype,
+                device,
+                dtype,
                 rope_scaling=self.cfg.rope_scaling,
                 original_max_seq_len=self.cfg.original_max_seq_len(),
             )
@@ -122,7 +127,7 @@ class Indus(nn.Module):
     def forward(
         self,
         idx: torch.Tensor,
-        targets: Optional[torch.Tensor] = None,
+        targets: torch.Tensor | None = None,
         return_aux: bool = True,
         past_kv=None,
         use_cache: bool = False,
@@ -131,7 +136,9 @@ class Indus(nn.Module):
         B, T = idx.shape
         total_len = position_offset + T
         if total_len > self.cfg.block_size:
-            raise ValueError(f"sequence length {total_len} exceeds block_size {self.cfg.block_size}")
+            raise ValueError(
+                f"sequence length {total_len} exceeds block_size {self.cfg.block_size}"
+            )
 
         x = self.tok_emb(idx)
         x = self.drop_emb(x)
@@ -143,9 +150,7 @@ class Indus(nn.Module):
         new_kvs = [] if use_cache else None
         for layer_idx, block in enumerate(self.blocks):
             pkv = past_kv[layer_idx] if past_kv is not None else None
-            x, aux, new_kv = block(
-                x, cos, sin, past_kv=pkv, use_cache=use_cache
-            )
+            x, aux, new_kv = block(x, cos, sin, past_kv=pkv, use_cache=use_cache)
             total_aux = total_aux + aux
             if use_cache:
                 new_kvs.append(new_kv)
@@ -180,13 +185,13 @@ class Indus(nn.Module):
         idx: torch.Tensor,
         max_new_tokens: int = 200,
         temperature: float = 1.0,
-        top_k: Optional[int] = None,
-        top_p: Optional[float] = None,
-        eos_token_id: Optional[int] = None,
+        top_k: int | None = None,
+        top_p: float | None = None,
+        eos_token_id: int | None = None,
     ) -> torch.Tensor:
         """Autoregressive generation with a compact GQA KV cache."""
         if idx.size(1) > self.cfg.block_size:
-            idx = idx[:, -self.cfg.block_size:]
+            idx = idx[:, -self.cfg.block_size :]
         out = self(idx, use_cache=True)
         cache = out.past_kv
         logits = out.logits[:, -1, :]
@@ -208,7 +213,7 @@ class Indus(nn.Module):
                 break
             if idx.size(1) > self.cfg.block_size:
                 # Cache positions no longer match after truncation; rebuild.
-                idx = idx[:, -self.cfg.block_size:]
+                idx = idx[:, -self.cfg.block_size :]
                 out = self(idx, use_cache=True)
                 cache = out.past_kv
                 logits = out.logits[:, -1, :]

@@ -12,7 +12,8 @@ from __future__ import annotations
 import json
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime, timezone
+from typing import Any
 
 
 @dataclass(frozen=True)
@@ -23,7 +24,7 @@ class DistillationRecord:
     prompt: str = ""
     teacher_output: str = ""
     target: str = ""
-    created_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    created_at: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
     metadata: dict = field(default_factory=dict)
 
 
@@ -50,14 +51,22 @@ def to_jsonl(records: list[DistillationRecord]) -> str:
     """
     if not records:
         return ""
-    return "\n".join(json.dumps({
-        "id": r.id,
-        "prompt": r.prompt,
-        "teacher_output": r.teacher_output,
-        "target": r.target,
-        "created_at": r.created_at,
-        "metadata": r.metadata,
-    }) for r in records) + "\n"
+    return (
+        "\n".join(
+            json.dumps(
+                {
+                    "id": r.id,
+                    "prompt": r.prompt,
+                    "teacher_output": r.teacher_output,
+                    "target": r.target,
+                    "created_at": r.created_at,
+                    "metadata": r.metadata,
+                }
+            )
+            for r in records
+        )
+        + "\n"
+    )
 
 
 __all__ = ["DistillationRecord", "build_record", "to_jsonl"]

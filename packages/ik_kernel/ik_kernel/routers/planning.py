@@ -1,9 +1,15 @@
 from fastapi import APIRouter
-from pydantic import BaseModel,Field
 from ik_planning import create_plan
-router=APIRouter()
-class PlanRequest(BaseModel): goal:str=Field(min_length=1,max_length=20000)
+from pydantic import BaseModel, Field
+
+router = APIRouter()
+
+
+class PlanRequest(BaseModel):
+    goal: str = Field(min_length=1, max_length=20000)
+
+
 @router.post("")
-async def create(req:PlanRequest):
-    p=create_plan(req.goal)
-    return {"goal":p.goal,"steps":[s.__dict__ for s in p.steps]}
+async def create(req: PlanRequest):
+    p = create_plan(req.goal)
+    return {"goal": p.goal, "steps": [s.__dict__ for s in p.steps]}

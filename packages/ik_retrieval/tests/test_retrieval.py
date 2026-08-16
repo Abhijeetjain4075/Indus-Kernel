@@ -9,7 +9,6 @@ from __future__ import annotations
 import os
 
 import pytest
-
 from ik_retrieval.chunking import FixedSizeChunker, SentenceChunker
 from ik_retrieval.engine import RetrievalEngine
 from ik_retrieval.strategies.bm25_strategy import BM25Strategy
@@ -67,6 +66,7 @@ class TestBM25Strategy:
 class TestGraphRAGEntityExtraction:
     def test_extract_capitalized_entities(self):
         from ik_retrieval.strategies.graph_rag import _extract_entities
+
         ents = _extract_entities("Apple Inc was founded by Steve Jobs in California")
         assert "apple" in ents
         assert "california" in ents
@@ -95,7 +95,7 @@ class TestGraphRAGEntityExtraction:
 class TestRAPTORClustering:
     def test_kmeans_basic(self):
         from ik_retrieval.strategies.raptor import _cluster_by_similarity
-        import numpy as np
+
         # Two clear clusters
         embs = [[1, 0, 0]] * 5 + [[0, 1, 0]] * 5
         labels = _cluster_by_similarity(embs, n_clusters=2)
@@ -109,12 +109,14 @@ class TestRAPTORClustering:
 class TestColBERTMaxSim:
     def test_identical_max_sim(self):
         from ik_retrieval.strategies.colbert import _max_sim
+
         e = [1.0, 0.0, 0.0]
         s = _max_sim([e, e], [e, e])
         assert s > 0
 
     def test_zero_max_sim_orthogonal(self):
         from ik_retrieval.strategies.colbert import _max_sim
+
         a = [1.0, 0.0, 0.0]
         b = [0.0, 1.0, 0.0]
         s = _max_sim([a], [b])
@@ -126,7 +128,9 @@ class TestRetrievalEngine:
     async def test_engine_dispatch(self):
         e = RetrievalEngine()
         # Add a document
-        e.add_document(Document(content="The cat sat on the mat. The dog ran in the park."), auto_chunk=False)
+        e.add_document(
+            Document(content="The cat sat on the mat. The dog ran in the park."), auto_chunk=False
+        )
         # BM25 query (no LLM needed)
         result = await e.retrieve(
             RetrievalQuery(query="cat", top_k=2, strategy=RetrievalStrategy.BM25)
@@ -154,7 +158,9 @@ class TestLLMStrategies:
     @pytest.mark.asyncio
     async def test_self_rag_runs(self):
         e = RetrievalEngine()
-        e.add_document(Document(content="Cats are mammals. They have fur and purr."), auto_chunk=False)
+        e.add_document(
+            Document(content="Cats are mammals. They have fur and purr."), auto_chunk=False
+        )
         result = await e.retrieve(
             RetrievalQuery(query="mammals with fur", top_k=1, strategy=RetrievalStrategy.SELF_RAG)
         )
@@ -163,7 +169,9 @@ class TestLLMStrategies:
     @pytest.mark.asyncio
     async def test_hyde_runs(self):
         e = RetrievalEngine()
-        e.add_document(Document(content="Cats are mammals. They have fur and purr."), auto_chunk=False)
+        e.add_document(
+            Document(content="Cats are mammals. They have fur and purr."), auto_chunk=False
+        )
         result = await e.retrieve(
             RetrievalQuery(query="mammals with fur", top_k=1, strategy=RetrievalStrategy.HYDE)
         )

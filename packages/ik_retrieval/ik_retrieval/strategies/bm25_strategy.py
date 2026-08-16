@@ -25,7 +25,6 @@ from ik_retrieval.types import (
     ScoredChunk,
 )
 
-
 _TOKEN_RE = re.compile(r"\w+")
 
 

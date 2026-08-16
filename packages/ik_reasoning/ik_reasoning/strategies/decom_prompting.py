@@ -15,7 +15,6 @@ from ik_reasoning.types import ReasoningRequest, ReasoningResult, ReasoningStep,
 from ik_router.router import get_router
 from ik_router.types import LLMRequest, Message, MessageRole
 
-
 _DECOMPOSE_PROMPT = """Decompose the question below into 2-4 sub-questions that, when answered together, answer the original. Number them 1, 2, 3, ...
 
 Question: {question}
@@ -41,14 +40,21 @@ class DecomposedPrompting(BaseReasoningStrategy):
         decomp_resp = await router.complete(
             LLMRequest(
                 messages=[
-                    Message(role=MessageRole.SYSTEM, content="You decompose questions into sub-questions."),
-                    Message(role=MessageRole.USER, content=_DECOMPOSE_PROMPT.format(question=req.question)),
+                    Message(
+                        role=MessageRole.SYSTEM,
+                        content="You decompose questions into sub-questions.",
+                    ),
+                    Message(
+                        role=MessageRole.USER,
+                        content=_DECOMPOSE_PROMPT.format(question=req.question),
+                    ),
                 ],
                 capability_requirements=["text"],
                 temperature=0.0,
             )
         )
         import re
+
         subs: list[str] = []
         for ln in decomp_resp.content.split("\n"):
             ln = ln.strip()
@@ -58,7 +64,9 @@ class DecomposedPrompting(BaseReasoningStrategy):
         if not subs:
             subs = [req.question]
 
-        steps: list[ReasoningStep] = [ReasoningStep(type="plan", content=decomp_resp.content, metadata={"n_sub": len(subs)})]
+        steps: list[ReasoningStep] = [
+            ReasoningStep(type="plan", content=decomp_resp.content, metadata={"n_sub": len(subs)})
+        ]
 
         # 2. Solve each in parallel
         async def solve_one(q: str) -> str:
@@ -73,6 +81,7 @@ class DecomposedPrompting(BaseReasoningStrategy):
                 )
             )
             return resp.content.strip()
+
         answers = await asyncio.gather(*[solve_one(s) for s in subs])
         for s, a in zip(subs, answers):
             steps.append(ReasoningStep(type="thought", content=f"{s} → {a}"))
@@ -82,9 +91,13 @@ class DecomposedPrompting(BaseReasoningStrategy):
             LLMRequest(
                 messages=[
                     Message(role=MessageRole.SYSTEM, content="You synthesize sub-answers."),
-                    Message(role=MessageRole.USER, content=_SYNTHESIZE_PROMPT.format(
-                        question=req.question, answers="\n".join(f"- {a}" for a in answers),
-                    )),
+                    Message(
+                        role=MessageRole.USER,
+                        content=_SYNTHESIZE_PROMPT.format(
+                            question=req.question,
+                            answers="\n".join(f"- {a}" for a in answers),
+                        ),
+                    ),
                 ],
                 capability_requirements=["text"],
                 temperature=0.0,

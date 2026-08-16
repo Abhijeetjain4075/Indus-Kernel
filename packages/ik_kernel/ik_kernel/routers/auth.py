@@ -1,23 +1,45 @@
 """API-key to short-lived JWT authentication."""
+
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, HTTPException, status
+
 try:
     from jose import jwt
 except ImportError:
-    import base64, hashlib, hmac, json
+    import base64
+    import hashlib
+    import hmac
+    import json
+
     class _JWT:
         @staticmethod
         def encode(claims, secret, algorithm="HS256"):
-            def b(v): return base64.urlsafe_b64encode(v).rstrip(b"=").decode()
-            h=b(json.dumps({"alg":algorithm,"typ":"JWT"},separators=(",",":"),sort_keys=True).encode())
-            body={k:(v.isoformat() if hasattr(v,"isoformat") else v.timestamp() if hasattr(v,"timestamp") else v) for k,v in claims.items()}
-            p=b(json.dumps(body,separators=(",",":"),sort_keys=True).encode())
-            sig=b(hmac.new(secret.encode(),f"{h}.{p}".encode(),hashlib.sha256).digest())
+            def b(v):
+                return base64.urlsafe_b64encode(v).rstrip(b"=").decode()
+
+            h = b(
+                json.dumps(
+                    {"alg": algorithm, "typ": "JWT"}, separators=(",", ":"), sort_keys=True
+                ).encode()
+            )
+            body = {
+                k: (
+                    v.isoformat()
+                    if hasattr(v, "isoformat")
+                    else v.timestamp()
+                    if hasattr(v, "timestamp")
+                    else v
+                )
+                for k, v in claims.items()
+            }
+            p = b(json.dumps(body, separators=(",", ":"), sort_keys=True).encode())
+            sig = b(hmac.new(secret.encode(), f"{h}.{p}".encode(), hashlib.sha256).digest())
             return f"{h}.{p}.{sig}"
-    jwt=_JWT()
+
+    jwt = _JWT()
 from pydantic import BaseModel, Field
 
 from ik_kernel.config import get_settings
@@ -46,7 +68,7 @@ def _issue_token(api_key: str) -> TokenResponse:
     principal = authenticate_api_key(api_key, settings)
     if principal is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid_api_key")
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     exp = now + timedelta(minutes=settings.jwt_expiration_minutes)
     claims = {
         "sub": principal.key_id,
@@ -71,7 +93,9 @@ def _issue_token(api_key: str) -> TokenResponse:
     )
 
 
-@router.post("/token", response_model=TokenResponse, summary="Exchange an API key for a short-lived JWT")
+@router.post(
+    "/token", response_model=TokenResponse, summary="Exchange an API key for a short-lived JWT"
+)
 async def token(req: TokenRequest) -> TokenResponse:
     return _issue_token(req.api_key)
 

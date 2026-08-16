@@ -15,10 +15,8 @@ Reference: arXiv:2004.12832
 from __future__ import annotations
 
 import time
-from typing import Iterable
 
 import numpy as np
-
 from ik_memory.embeddings import embed_text
 from ik_retrieval.strategies.bm25_strategy import BM25Strategy
 from ik_retrieval.types import (
@@ -30,7 +28,9 @@ from ik_retrieval.types import (
 )
 
 
-def _pseudo_token_embeddings(text: str, full_emb: list[float], n_tokens: int = 16) -> list[list[float]]:
+def _pseudo_token_embeddings(
+    text: str, full_emb: list[float], n_tokens: int = 16
+) -> list[list[float]]:
     """Real approach: split text into n_tokens windows, embed each.
 
     This is a real approximation of ColBERT token embeddings. In
@@ -88,7 +88,9 @@ class ColBERTReranker:
             q_full = embed_text(query.query)
         except RuntimeError as e:
             return RetrievalResult(
-                query=query, chunks=candidates[: query.top_k], took_ms=0,
+                query=query,
+                chunks=candidates[: query.top_k],
+                took_ms=0,
                 strategy=RetrievalStrategy.COLBERT,
                 rationale=f"embedding model not available, falling back to BM25: {e}",
             )

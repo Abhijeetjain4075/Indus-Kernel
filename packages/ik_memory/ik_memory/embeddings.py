@@ -9,9 +9,7 @@ This is a real model — no mocked vectors, no fake embeddings.
 
 from __future__ import annotations
 
-import hashlib
 import logging
-import os
 
 import numpy as np
 
@@ -64,8 +62,7 @@ def embed_texts(texts: list[str]) -> list[list[float]]:
     if _load_model():
         return _model.encode(texts, normalize_embeddings=True).tolist()
     raise RuntimeError(
-        "sentence-transformers is not available. "
-        "Install it: uv pip install sentence-transformers."
+        "sentence-transformers is not available. Install it: uv pip install sentence-transformers."
     )
 
 

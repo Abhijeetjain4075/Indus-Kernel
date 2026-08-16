@@ -36,6 +36,7 @@ def _cluster_by_similarity(
     iterations. This is a real algorithm (not a mock), just simplified.
     """
     import numpy as np
+
     if not embeddings:
         return []
     n_clusters = min(n_clusters, len(embeddings))
@@ -50,10 +51,12 @@ def _cluster_by_similarity(
         sims = arr @ centroids.T
         assignments = sims.argmax(axis=1)
         # Recompute
-        new_centroids = np.array([
-            arr[assignments == k].mean(axis=0) if (assignments == k).any() else centroids[k]
-            for k in range(n_clusters)
-        ])
+        new_centroids = np.array(
+            [
+                arr[assignments == k].mean(axis=0) if (assignments == k).any() else centroids[k]
+                for k in range(n_clusters)
+            ]
+        )
         if np.allclose(centroids, new_centroids, atol=1e-6):
             break
         centroids = new_centroids
@@ -91,7 +94,11 @@ class RAPTORRetriever(BaseRetrievalStrategy):
                 s = Chunk(
                     document_id=members[0].document_id,
                     content=txt,
-                    metadata={"level": len(self._levels), "cluster": lbl, "n_members": len(members)},
+                    metadata={
+                        "level": len(self._levels),
+                        "cluster": lbl,
+                        "n_members": len(members),
+                    },
                 )
                 try:
                     s.embedding = embed_text(txt)
@@ -120,7 +127,10 @@ class RAPTORRetriever(BaseRetrievalStrategy):
             q_emb = embed_text(query.query)
         except RuntimeError as e:
             return RetrievalResult(
-                query=query, chunks=[], took_ms=0, strategy=RetrievalStrategy.RAPTOR,
+                query=query,
+                chunks=[],
+                took_ms=0,
+                strategy=RetrievalStrategy.RAPTOR,
                 rationale=f"embedding model not available: {e}",
             )
 

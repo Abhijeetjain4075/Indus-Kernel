@@ -131,8 +131,7 @@ class PolicyEngine:
         suitable = [
             c
             for c in self.candidates
-            if c.health != "down"
-            and capability_requirements.issubset(c.capabilities)
+            if c.health != "down" and capability_requirements.issubset(c.capabilities)
         ]
 
         if not suitable:

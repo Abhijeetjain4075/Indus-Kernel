@@ -15,7 +15,6 @@ from ik_reasoning.types import ReasoningRequest, ReasoningResult, ReasoningStep,
 from ik_router.router import get_router
 from ik_router.types import LLMRequest, Message, MessageRole
 
-
 _REFLECT_PROMPT = """You just attempted the question below. Your last answer was:
 {answer}
 
@@ -36,8 +35,12 @@ class Reflexion:
             resp = await router.complete(
                 LLMRequest(
                     messages=[
-                        Message(role=MessageRole.SYSTEM, content="You are a self-reflective agent."),
-                        Message(role=MessageRole.USER, content=_REFLECT_PROMPT.format(answer=answer)),
+                        Message(
+                            role=MessageRole.SYSTEM, content="You are a self-reflective agent."
+                        ),
+                        Message(
+                            role=MessageRole.USER, content=_REFLECT_PROMPT.format(answer=answer)
+                        ),
                     ],
                     capability_requirements=["text"],
                     temperature=0.3,
@@ -45,7 +48,7 @@ class Reflexion:
                 )
             )
             return resp.content.strip()
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             return f"Reflection: unable to reflect ({e})"
 
     async def reason(self, req: ReasoningRequest) -> ReasoningResult:
@@ -70,15 +73,23 @@ class Reflexion:
             all_steps.extend(result.steps)
             best_answer = result.answer
 
-            if result.answer and "I don't know" not in result.answer.lower() and len(result.answer) > 5:
+            if (
+                result.answer
+                and "I don't know" not in result.answer.lower()
+                and len(result.answer) > 5
+            ):
                 # Found a real answer
                 break
             # Reflect
             refl = await self._reflect(req.question, result.answer)
             reflections.append(refl)
-            all_steps.append(ReasoningStep(type="reflection", content=refl, metadata={"trial": trial}))
+            all_steps.append(
+                ReasoningStep(type="reflection", content=refl, metadata={"trial": trial})
+            )
 
-        all_steps.append(ReasoningStep(type="final", content=best_answer, metadata={"n_trials": trial + 1}))
+        all_steps.append(
+            ReasoningStep(type="final", content=best_answer, metadata={"n_trials": trial + 1})
+        )
         return ReasoningResult(
             request=req,
             answer=best_answer,

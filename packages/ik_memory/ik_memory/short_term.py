@@ -23,7 +23,9 @@ class ShortTermMemory:
         self.default_ttl_s = default_ttl_s
         self._store: dict[str, tuple[Memory, float]] = {}
 
-    def add(self, user_id: str, content: str, session_id: str | None = None, **kwargs: Any) -> Memory:
+    def add(
+        self, user_id: str, content: str, session_id: str | None = None, **kwargs: Any
+    ) -> Memory:
         """Add a short-term memory."""
         mem = Memory(
             id=f"stm_{uuid.uuid4()}",

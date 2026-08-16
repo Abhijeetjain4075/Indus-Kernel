@@ -188,7 +188,9 @@ class BudgetEnforcer:
             )
             self.db.commit()
 
-    def set_budget(self, tenant_id: str, max_cost_cents_per_hour: int, max_tokens_per_hour: int) -> None:
+    def set_budget(
+        self, tenant_id: str, max_cost_cents_per_hour: int, max_tokens_per_hour: int
+    ) -> None:
         """Override a tenant's budget."""
         with self.lock:
             self.get_or_create(tenant_id)

@@ -75,7 +75,9 @@ class SemanticCache:
             return None
         entry.hit_count += 1
         self._hits += 1
-        logger.debug(f"cache HIT for {h[:8]} (model={req.model_hint}, age={time.time() - entry.created_at:.0f}s)")
+        logger.debug(
+            f"cache HIT for {h[:8]} (model={req.model_hint}, age={time.time() - entry.created_at:.0f}s)"
+        )
         # Return a copy with cache_hit=True
         cached = entry.response.model_copy()
         cached.cache_hit = True

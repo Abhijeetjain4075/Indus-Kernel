@@ -31,7 +31,9 @@ class Message(BaseModel):
 class ToolCall(BaseModel):
     """A tool invocation requested by the model."""
 
-    id: str = Field(default_factory=lambda: f"call_{uuid.uuid7() if hasattr(uuid, 'uuid7') else uuid.uuid4()}")
+    id: str = Field(
+        default_factory=lambda: f"call_{uuid.uuid7() if hasattr(uuid, 'uuid7') else uuid.uuid4()}"
+    )
     name: str
     arguments: dict[str, Any]
 
@@ -75,7 +77,9 @@ class LLMRequest(BaseModel):
     stream: bool = False
 
     # Routing hints
-    capability_requirements: list[str] = Field(default_factory=list)  # ["code", "math", "json-mode", ...]
+    capability_requirements: list[str] = Field(
+        default_factory=list
+    )  # ["code", "math", "json-mode", ...]
     tenant_id: str = "t-default"
     user_id: str | None = None
 

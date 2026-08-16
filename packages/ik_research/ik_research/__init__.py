@@ -12,8 +12,8 @@ fabricated claim.
 from __future__ import annotations
 
 import re
+from collections.abc import Iterable
 from dataclasses import dataclass, field
-from typing import Iterable
 
 
 @dataclass(frozen=True)
@@ -148,11 +148,11 @@ def research(task: ResearchTask, sources: Iterable[ResearchSource]) -> ResearchR
 
 
 __all__ = [
-    "make_research_brief",
-    "ResearchTask",
-    "ResearchSource",
     "ResearchClaim",
     "ResearchResult",
+    "ResearchSource",
+    "ResearchTask",
+    "make_research_brief",
     "research",
 ]
 

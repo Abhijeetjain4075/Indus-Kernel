@@ -10,7 +10,6 @@ from ik_reasoning.types import ReasoningRequest, ReasoningResult, ReasoningStep,
 from ik_router.router import get_router
 from ik_router.types import LLMRequest, Message, MessageRole
 
-
 _COT_PROMPT = """Think step by step about the problem below. Write out your reasoning in numbered steps, then give the final answer on a line starting with "Final Answer:".
 
 Question: {question}
@@ -27,8 +26,13 @@ class ChainOfThought(BaseReasoningStrategy):
         resp = await router.complete(
             LLMRequest(
                 messages=[
-                    Message(role=MessageRole.SYSTEM, content="You are an expert reasoner. Think step by step."),
-                    Message(role=MessageRole.USER, content=_COT_PROMPT.format(question=req.question)),
+                    Message(
+                        role=MessageRole.SYSTEM,
+                        content="You are an expert reasoner. Think step by step.",
+                    ),
+                    Message(
+                        role=MessageRole.USER, content=_COT_PROMPT.format(question=req.question)
+                    ),
                 ],
                 model_hint=req.model_hint,
                 temperature=req.temperature,
@@ -51,7 +55,9 @@ class ChainOfThought(BaseReasoningStrategy):
                 if buffer:
                     steps.append(ReasoningStep(type="thought", content=" ".join(buffer).strip()))
                 buffer = []
-                steps.append(ReasoningStep(type="final", content=ln.split("Final Answer:", 1)[1].strip()))
+                steps.append(
+                    ReasoningStep(type="final", content=ln.split("Final Answer:", 1)[1].strip())
+                )
             else:
                 buffer.append(ln)
         if buffer:

@@ -2,18 +2,17 @@
 
 Supports both the char-level demo and the BPE-based model.
 """
+
 from __future__ import annotations
-from pathlib import Path
-from typing import Optional
 
 import torch
 
-from .model import Indus
 from .config import IndusConfig
+from .model import Indus
 from .tokenizer import IndusTokenizer
 
 
-def load_indus(checkpoint: str, device: Optional[str] = None) -> tuple[Indus, IndusTokenizer, dict]:
+def load_indus(checkpoint: str, device: str | None = None) -> tuple[Indus, IndusTokenizer, dict]:
     """Load a model + tokenizer from a checkpoint.
 
     For char-level checkpoints, the actual char vocab (stoi/itos) is
@@ -37,6 +36,7 @@ def load_indus(checkpoint: str, device: Optional[str] = None) -> tuple[Indus, In
         else:
             # Fallback for old checkpoints without embedded vocab.
             from .data import download_shakespeare
+
             path = download_shakespeare("data/tinyshakespeare.txt")
             text = path.read_text(encoding="utf-8")
             tokenizer._char_init_or_get(text)
@@ -50,8 +50,8 @@ def generate(
     max_new_tokens: int = 500,
     temperature: float = 0.8,
     top_k: int = 200,
-    top_p: Optional[float] = None,
-    device: Optional[str] = None,
+    top_p: float | None = None,
+    device: str | None = None,
 ) -> str:
     """Generate text from a prompt."""
     model, tokenizer, _ = load_indus(checkpoint, device)

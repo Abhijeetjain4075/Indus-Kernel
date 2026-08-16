@@ -9,7 +9,7 @@ import time
 from collections import Counter
 
 from ik_reasoning.strategies.cot import ChainOfThought
-from ik_reasoning.types import ReasoningRequest, ReasoningResult, ReasoningStep, ReasoningStrategy
+from ik_reasoning.types import ReasoningRequest, ReasoningResult, ReasoningStrategy
 
 
 class SelfConsistency:
@@ -40,9 +40,7 @@ class SelfConsistency:
         counts = Counter(answers)
         most_common, _ = counts.most_common(1)[0]
         # Find the original answer corresponding to the majority
-        winner_idx = next(
-            (i for i, a in enumerate(answers) if a == most_common), 0
-        )
+        winner_idx = next((i for i, a in enumerate(answers) if a == most_common), 0)
         winner = results[winner_idx]
         all_steps = [s for r in results for s in r.steps]
         return ReasoningResult(

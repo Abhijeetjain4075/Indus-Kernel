@@ -19,19 +19,18 @@ import logging
 import re
 import uuid
 from dataclasses import dataclass
-from datetime import datetime, timezone
 from enum import Enum
 
 from ik_memory.embeddings import cosine_similarity, embed_text
-from ik_memory.types import Memory, MemoryAdd, MemoryLayer, MemoryType
+from ik_memory.types import Memory, MemoryAdd, MemoryLayer
 
 logger = logging.getLogger(__name__)
 
 
 _SENTENCE_RE = re.compile(
-    r"(?<=[.!?])\s+(?=[A-Z])|"           # sentence end + capital next
-    r"\n+|"                              # newline break
-    r"(?<=\))\s+(?=[A-Z])"               # closing paren + capital
+    r"(?<=[.!?])\s+(?=[A-Z])|"  # sentence end + capital next
+    r"\n+|"  # newline break
+    r"(?<=\))\s+(?=[A-Z])"  # closing paren + capital
 )
 
 
@@ -99,7 +98,7 @@ class Mem0Algorithm:
 
     # Thresholds
     SIMILARITY_THRESHOLD = 0.78  # cosine above this is "similar"
-    IDENTICAL_THRESHOLD = 0.92   # cosine above this is "same fact"
+    IDENTICAL_THRESHOLD = 0.92  # cosine above this is "same fact"
 
     def __init__(self, llm_extract_fn=None, llm_decide_fn=None) -> None:
         """Args:

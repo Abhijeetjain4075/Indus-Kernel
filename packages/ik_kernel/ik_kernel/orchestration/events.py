@@ -14,9 +14,8 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
-
 
 SCHEMA_VERSION = "1.0.0"
 
@@ -26,7 +25,7 @@ def _new_event_id() -> str:
 
 
 def _now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 @dataclass(frozen=True)
@@ -64,50 +63,102 @@ def TaskCreated(task_id: str, goal: str, **kw) -> Event:
 
 
 def TaskPlanned(task_id: str, plan_id: str, n_steps: int, **kw) -> Event:
-    return Event(type="TaskPlanned", correlation_id=task_id, payload={"plan_id": plan_id, "n_steps": n_steps}, **kw)
+    return Event(
+        type="TaskPlanned",
+        correlation_id=task_id,
+        payload={"plan_id": plan_id, "n_steps": n_steps},
+        **kw,
+    )
 
 
 def PlanValidated(task_id: str, plan_id: str, version: int, **kw) -> Event:
-    return Event(type="PlanValidated", correlation_id=task_id, payload={"plan_id": plan_id, "version": version}, **kw)
+    return Event(
+        type="PlanValidated",
+        correlation_id=task_id,
+        payload={"plan_id": plan_id, "version": version},
+        **kw,
+    )
 
 
 def ExecutionStarted(task_id: str, plan_id: str, **kw) -> Event:
-    return Event(type="ExecutionStarted", correlation_id=task_id, payload={"plan_id": plan_id}, **kw)
+    return Event(
+        type="ExecutionStarted", correlation_id=task_id, payload={"plan_id": plan_id}, **kw
+    )
 
 
 def StepStarted(task_id: str, step_id: str, attempt: int, **kw) -> Event:
-    return Event(type="StepStarted", correlation_id=task_id, payload={"step_id": step_id, "attempt": attempt}, **kw)
+    return Event(
+        type="StepStarted",
+        correlation_id=task_id,
+        payload={"step_id": step_id, "attempt": attempt},
+        **kw,
+    )
 
 
-def StepCompleted(task_id: str, step_id: str, attempt: int, cost_cents: int, latency_ms: int, **kw) -> Event:
-    return Event(type="StepCompleted", correlation_id=task_id, payload={
-        "step_id": step_id, "attempt": attempt,
-        "cost_cents": cost_cents, "latency_ms": latency_ms,
-    }, **kw)
+def StepCompleted(
+    task_id: str, step_id: str, attempt: int, cost_cents: int, latency_ms: int, **kw
+) -> Event:
+    return Event(
+        type="StepCompleted",
+        correlation_id=task_id,
+        payload={
+            "step_id": step_id,
+            "attempt": attempt,
+            "cost_cents": cost_cents,
+            "latency_ms": latency_ms,
+        },
+        **kw,
+    )
 
 
 def StepFailed(task_id: str, step_id: str, attempt: int, error: str, **kw) -> Event:
-    return Event(type="StepFailed", correlation_id=task_id, payload={
-        "step_id": step_id, "attempt": attempt, "error": error,
-    }, **kw)
+    return Event(
+        type="StepFailed",
+        correlation_id=task_id,
+        payload={
+            "step_id": step_id,
+            "attempt": attempt,
+            "error": error,
+        },
+        **kw,
+    )
 
 
 def EvaluationCompleted(task_id: str, target_id: str, outcome: str, score: float, **kw) -> Event:
-    return Event(type="EvaluationCompleted", correlation_id=task_id, payload={
-        "target_id": target_id, "outcome": outcome, "score": score,
-    }, **kw)
+    return Event(
+        type="EvaluationCompleted",
+        correlation_id=task_id,
+        payload={
+            "target_id": target_id,
+            "outcome": outcome,
+            "score": score,
+        },
+        **kw,
+    )
 
 
 def ReplanRequested(task_id: str, reason: str, replan_count: int, **kw) -> Event:
-    return Event(type="ReplanRequested", correlation_id=task_id, payload={
-        "reason": reason, "replan_count": replan_count,
-    }, **kw)
+    return Event(
+        type="ReplanRequested",
+        correlation_id=task_id,
+        payload={
+            "reason": reason,
+            "replan_count": replan_count,
+        },
+        **kw,
+    )
 
 
 def ExecutionCompleted(task_id: str, status: str, total_cost_cents: int, **kw) -> Event:
-    return Event(type="ExecutionCompleted", correlation_id=task_id, payload={
-        "status": status, "total_cost_cents": total_cost_cents,
-    }, **kw)
+    return Event(
+        type="ExecutionCompleted",
+        correlation_id=task_id,
+        payload={
+            "status": status,
+            "total_cost_cents": total_cost_cents,
+        },
+        **kw,
+    )
 
 
 def ExecutionFailed(task_id: str, reason: str, **kw) -> Event:

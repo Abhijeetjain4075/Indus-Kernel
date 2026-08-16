@@ -9,10 +9,9 @@ from __future__ import annotations
 import json
 
 import pytest
-
 from ik_protocols import (
-    AgentMessage,
     PROTOCOL_VERSIONS,
+    AgentMessage,
     from_a2a_task,
     from_mcp_response,
     to_a2a_task,
@@ -50,7 +49,10 @@ class TestCanonicalMessage:
 
     def test_correlation_id_preserved(self):
         m = AgentMessage(
-            sender="a", recipient="b", type="x", payload={},
+            sender="a",
+            recipient="b",
+            type="x",
+            payload={},
             correlation_id="corr-123",
         )
         assert m.normalized().correlation_id == "corr-123"
@@ -71,7 +73,9 @@ class TestA2ATranslation:
 
     def test_from_a2a_round_trip(self):
         original = AgentMessage(
-            sender="alice", recipient="bob", type="request",
+            sender="alice",
+            recipient="bob",
+            type="request",
             payload={"intent": "summarize", "text": "hello"},
             correlation_id="trace-1",
         )
@@ -112,7 +116,11 @@ class TestMCPTranslation:
         assert from_mcp_response(env) == {"output": "ok"}
 
     def test_from_mcp_response_raises_on_error(self):
-        env = {"jsonrpc": "2.0", "id": "1", "error": {"code": -32601, "message": "Method not found"}}
+        env = {
+            "jsonrpc": "2.0",
+            "id": "1",
+            "error": {"code": -32601, "message": "Method not found"},
+        }
         with pytest.raises(RuntimeError, match="Method not found"):
             from_mcp_response(env)
 

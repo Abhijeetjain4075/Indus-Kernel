@@ -1,4 +1,5 @@
 """Real tests for ik_eval."""
+
 from ik_eval import EvalResult, aggregate, exact_match
 
 
@@ -50,7 +51,12 @@ class TestAggregate:
 
 def pytest_approx(val):
     """Helper: assert close to."""
+
     class _Approx:
-        def __eq__(self, other): return abs(val - other) < 1e-6
-        def __ne__(self, other): return not self.__eq__(other)
+        def __eq__(self, other):
+            return abs(val - other) < 1e-6
+
+        def __ne__(self, other):
+            return not self.__eq__(other)
+
     return _Approx()

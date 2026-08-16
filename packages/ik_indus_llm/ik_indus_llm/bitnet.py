@@ -22,7 +22,7 @@ estimator).
 """
 
 from __future__ import annotations
-import math
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -74,6 +74,7 @@ class BitLinear(nn.Module):
     full-precision weight is kept as `self.weight`, and STE passes the
     gradient through the quantization.
     """
+
     def __init__(self, in_features: int, out_features: int, bias: bool = False):
         super().__init__()
         self.in_features = in_features
@@ -121,7 +122,11 @@ class BitLinear(nn.Module):
 # Helper: convert a model in-place to use BitLinear
 # ---------------------------------------------------------------------------
 
-def replace_linears_with_bitlinear(model: nn.Module, target_substrings=("q_proj", "k_proj", "v_proj", "o_proj", "gate", "up", "down")) -> int:
+
+def replace_linears_with_bitlinear(
+    model: nn.Module,
+    target_substrings=("q_proj", "k_proj", "v_proj", "o_proj", "gate", "up", "down"),
+) -> int:
     """Walk a model and replace matching nn.Linear with BitLinear. Returns count."""
     n = 0
     for name, module in list(model.named_modules()):

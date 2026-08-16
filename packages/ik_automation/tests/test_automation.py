@@ -1,4 +1,5 @@
 """Real tests for ik_automation."""
+
 from ik_automation import Automation, AutomationEngine
 
 
@@ -33,5 +34,6 @@ class TestAutomationEngine:
         e = AutomationEngine()
         e.register(Automation(id="a", trigger="x", action="x"), lambda ev: None)
         import pytest
+
         with pytest.raises(ValueError, match="already registered"):
             e.register(Automation(id="a", trigger="x", action="x"), lambda ev: None)

@@ -1,4 +1,5 @@
 """Real tests for ik_state."""
+
 from ik_state import StateStore
 
 
@@ -31,17 +32,22 @@ class TestStateStore:
 
     def test_thread_safety(self):
         import threading
+
         s = StateStore()
         errors = []
+
         def writer(i):
             try:
                 for _ in range(100):
                     s.set(f"k{i}", i)
             except Exception as e:
                 errors.append(e)
+
         threads = [threading.Thread(target=writer, args=(i,)) for i in range(10)]
-        for t in threads: t.start()
-        for t in threads: t.join()
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
         assert not errors
         for i in range(10):
             assert s.get(f"k{i}") == i

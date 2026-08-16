@@ -6,14 +6,10 @@ recency decay) and real data. No mocks, no sample returns.
 
 from __future__ import annotations
 
-import math
 import time
-import uuid
-from datetime import datetime, timezone, timedelta
+from datetime import UTC, datetime, timedelta
 
-import numpy as np
 import pytest
-
 from ik_memory.embeddings import cosine_similarity, cosine_similarity_batch
 from ik_memory.engine import MemoryEngine
 from ik_memory.long_term import LongTermMemory
@@ -164,6 +160,7 @@ class TestMem0Algorithm:
         # Set up an existing memory with a real embedding
         try:
             from ik_memory.embeddings import embed_text
+
             emb = embed_text("User likes apples")
         except RuntimeError:
             pytest.skip("sentence-transformers not available")
@@ -182,6 +179,7 @@ class TestMem0Algorithm:
         algo = Mem0Algorithm()
         try:
             from ik_memory.embeddings import embed_text
+
             emb = embed_text("User likes red apples")
         except RuntimeError:
             pytest.skip("sentence-transformers not available")
@@ -203,6 +201,7 @@ class TestMem0Algorithm:
         algo = Mem0Algorithm()
         try:
             from ik_memory.embeddings import embed_text
+
             emb = embed_text("User likes red apples")
         except RuntimeError:
             pytest.skip("sentence-transformers not available")
@@ -336,7 +335,7 @@ class TestMultiSignalRetriever:
         engine = MemoryEngine()
         engine.long = store
         # Add old and new
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         old = Memory(
             id="old",
             user_id="u1",
@@ -356,6 +355,7 @@ class TestMultiSignalRetriever:
         # Need to inject store reference for retriever tests
         # The retriever uses get_long_term_memory() singleton; we override it
         from ik_memory import retriever as retriever_mod
+
         original = retriever_mod.get_long_term_memory
         retriever_mod.get_long_term_memory = lambda: store
         try:
@@ -376,6 +376,7 @@ class TestMultiSignalRetriever:
         retriever = MultiSignalRetriever()
         retriever.weights = {RetrievalSignal.IMPORTANCE: 1.0}
         from ik_memory import retriever as retriever_mod
+
         original = retriever_mod.get_long_term_memory
         retriever_mod.get_long_term_memory = lambda: store
         try:
@@ -436,9 +437,7 @@ class TestMemoryEngine:
         engine.short.add("u1", "a")
         engine.short.add("u1", "b")
         try:
-            await engine.add(
-                Memory(user_id="u1", content="c", layer=MemoryLayer.LONG)
-            )
+            await engine.add(Memory(user_id="u1", content="c", layer=MemoryLayer.LONG))
         except RuntimeError:
             pytest.skip("sentence-transformers not available")
         n = engine.clear("u1")

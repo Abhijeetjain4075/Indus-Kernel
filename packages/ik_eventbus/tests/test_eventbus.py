@@ -1,5 +1,5 @@
 """Real tests for ik_eventbus."""
-import asyncio
+
 import pytest
 from ik_eventbus import Event, EventBus
 

@@ -20,7 +20,7 @@ import os
 import time
 from typing import Any
 
-from ik_router.budget import BudgetExceededError, get_budget_enforcer
+from ik_router.budget import get_budget_enforcer
 from ik_router.cache import get_cache
 from ik_router.errors import ConfigurationError
 from ik_router.fallback import get_fallback_chain
@@ -31,7 +31,6 @@ from ik_router.types import (
     LLMRequest,
     LLMResponse,
     LLMUsage,
-    Message,
     MessageRole,
     ToolCall,
 )
@@ -74,9 +73,14 @@ class LLMRouter:
             return candidate
         default = os.path.abspath(
             os.path.join(
-                os.path.dirname(__file__), "..", "..",
-                "ik_indus_llm", "ik_indus_llm",
-                "artifacts", "checkpoints", "pretrain",
+                os.path.dirname(__file__),
+                "..",
+                "..",
+                "ik_indus_llm",
+                "ik_indus_llm",
+                "artifacts",
+                "checkpoints",
+                "pretrain",
                 "indus_tiny_v0.3.0.pt",
             )
         )
@@ -84,10 +88,18 @@ class LLMRouter:
 
     def _has_external_provider(self) -> bool:
         keys = [
-            "OPENAI_API_KEY", "ANTHROPIC_API_KEY", "GOOGLE_API_KEY",
-            "AZURE_API_KEY", "COHERE_API_KEY", "MISTRAL_API_KEY",
-            "GROQ_API_KEY", "TOGETHER_API_KEY", "FIREWORKS_API_KEY",
-            "DEEPINFRA_API_KEY", "OPENROUTER_API_KEY", "LITELLM_API_KEY",
+            "OPENAI_API_KEY",
+            "ANTHROPIC_API_KEY",
+            "GOOGLE_API_KEY",
+            "AZURE_API_KEY",
+            "COHERE_API_KEY",
+            "MISTRAL_API_KEY",
+            "GROQ_API_KEY",
+            "TOGETHER_API_KEY",
+            "FIREWORKS_API_KEY",
+            "DEEPINFRA_API_KEY",
+            "OPENROUTER_API_KEY",
+            "LITELLM_API_KEY",
         ]
         return any(os.environ.get(k) for k in keys)
 
@@ -198,9 +210,7 @@ class LLMRouter:
         if req.stop:
             kwargs["stop"] = req.stop
         if req.tools:
-            kwargs["tools"] = [
-                {"type": "function", "function": t.model_dump()} for t in req.tools
-            ]
+            kwargs["tools"] = [{"type": "function", "function": t.model_dump()} for t in req.tools]
         if req.tool_choice:
             kwargs["tool_choice"] = req.tool_choice
         if req.response_format:
@@ -217,9 +227,7 @@ class LLMRouter:
         result. Token counts are estimated via tiktoken; cost is 0 (local).
         """
         runtime = self._load_indus_local()
-        last_user = next(
-            (m for m in reversed(req.messages) if m.role == MessageRole.USER), None
-        )
+        last_user = next((m for m in reversed(req.messages) if m.role == MessageRole.USER), None)
         if last_user is None:
             raise ConfigurationError("Indus native provider requires a user message")
         prompt = last_user.content
@@ -229,6 +237,7 @@ class LLMRouter:
         temperature = req.temperature if req.temperature is not None else 0.7
         # Run the real model in a thread (PyTorch is CPU-bound)
         import asyncio
+
         out = await asyncio.to_thread(
             runtime.generate,
             prompt,
@@ -262,6 +271,7 @@ class LLMRouter:
         tool_calls = None
         if hasattr(msg, "tool_calls") and msg.tool_calls:
             import json as _json
+
             tool_calls = []
             for tc in msg.tool_calls:
                 args = tc.function.arguments
@@ -290,9 +300,7 @@ class LLMRouter:
     async def embed(self, req: EmbedRequest) -> EmbedResponse:
         """Embed text via LiteLLM (real)."""
         if not self._has_external_provider():
-            raise ConfigurationError(
-                "No external provider API key found; required for embeddings."
-            )
+            raise ConfigurationError("No external provider API key found; required for embeddings.")
         texts = [req.input] if isinstance(req.input, str) else req.input
         resp = await self._litellm.aembedding(model=req.model, input=texts)
         return EmbedResponse(
@@ -310,6 +318,7 @@ class LLMRouter:
         """Count tokens in text (real, tiktoken-backed)."""
         try:
             import tiktoken
+
             try:
                 encoding = tiktoken.encoding_for_model(model)
             except KeyError:
@@ -319,7 +328,13 @@ class LLMRouter:
             return max(1, len(text) // 4)
 
     def _count_message_tokens(self, req: LLMRequest) -> int:
-        return sum(self._count_text_tokens(m.content, req.model_hint or "gpt-4o-mini") for m in req.messages) + 4
+        return (
+            sum(
+                self._count_text_tokens(m.content, req.model_hint or "gpt-4o-mini")
+                for m in req.messages
+            )
+            + 4
+        )
 
     def _compute_cost(self, model: str, prompt_tokens: int, completion_tokens: int) -> int:
         for c in self.policy.candidates:

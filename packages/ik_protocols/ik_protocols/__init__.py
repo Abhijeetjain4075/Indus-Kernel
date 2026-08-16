@@ -38,7 +38,7 @@ class AgentMessage:
     timestamp: float = 0.0
     correlation_id: str = ""  # for tracing across hops
 
-    def normalized(self) -> "AgentMessage":
+    def normalized(self) -> AgentMessage:
         return AgentMessage(
             sender=self.sender,
             recipient=self.recipient,
@@ -166,12 +166,12 @@ PROTOCOL_VERSIONS = {
 
 
 __all__ = [
-    "AgentMessage",
-    "validate_message",
-    "to_a2a_task",
-    "from_a2a_task",
-    "to_mcp_call",
-    "from_mcp_response",
-    "to_mcp_tool_list",
     "PROTOCOL_VERSIONS",
+    "AgentMessage",
+    "from_a2a_task",
+    "from_mcp_response",
+    "to_a2a_task",
+    "to_mcp_call",
+    "to_mcp_tool_list",
+    "validate_message",
 ]

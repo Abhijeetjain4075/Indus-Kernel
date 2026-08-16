@@ -12,7 +12,6 @@ from ik_reasoning.types import ReasoningRequest, ReasoningResult, ReasoningStep,
 from ik_router.router import get_router
 from ik_router.types import LLMRequest, Message, MessageRole
 
-
 _PLAN_PROMPT = """Break the question into a numbered list of 2-5 reasoning steps. Each step should be a single sentence.
 
 Question: {question}
@@ -40,7 +39,9 @@ class PlanAndSolve(BaseReasoningStrategy):
             LLMRequest(
                 messages=[
                     Message(role=MessageRole.SYSTEM, content="You break problems into steps."),
-                    Message(role=MessageRole.USER, content=_PLAN_PROMPT.format(question=req.question)),
+                    Message(
+                        role=MessageRole.USER, content=_PLAN_PROMPT.format(question=req.question)
+                    ),
                 ],
                 capability_requirements=["text"],
                 temperature=0.0,
@@ -53,7 +54,10 @@ class PlanAndSolve(BaseReasoningStrategy):
             LLMRequest(
                 messages=[
                     Message(role=MessageRole.SYSTEM, content="You solve problems step by step."),
-                    Message(role=MessageRole.USER, content=_SOLVE_PROMPT.format(question=req.question, steps=steps_text)),
+                    Message(
+                        role=MessageRole.USER,
+                        content=_SOLVE_PROMPT.format(question=req.question, steps=steps_text),
+                    ),
                 ],
                 capability_requirements=["text"],
                 temperature=req.temperature,

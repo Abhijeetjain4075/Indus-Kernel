@@ -16,27 +16,56 @@ from typing import Any
 try:
     import structlog
 except ImportError:  # optional structured logging fallback
+
     class _StdLogger:
-        def info(self,msg,*args,**kwargs): logging.getLogger("indus").info(msg)
-        def warning(self,msg,*args,**kwargs): logging.getLogger("indus").warning(msg)
-        def error(self,msg,*args,**kwargs): logging.getLogger("indus").error(msg)
+        def info(self, msg, *args, **kwargs):
+            logging.getLogger("indus").info(msg)
+
+        def warning(self, msg, *args, **kwargs):
+            logging.getLogger("indus").warning(msg)
+
+        def error(self, msg, *args, **kwargs):
+            logging.getLogger("indus").error(msg)
+
     class _StructlogFallback:
         @staticmethod
-        def get_logger(name): return _StdLogger()
+        def get_logger(name):
+            return _StdLogger()
+
         @staticmethod
-        def configure(**kwargs): return None
-    structlog=_StructlogFallback()
+        def configure(**kwargs):
+            return None
+
+    structlog = _StructlogFallback()
 from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from starlette.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
 from prometheus_client import make_asgi_app
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from ik_kernel.config import Settings, get_settings
+from ik_kernel.deps import get_current_principal, get_request_id
 from ik_kernel.lifespan import lifespan
 from ik_kernel.rate_limit import RateLimiter
-from ik_kernel.deps import get_current_principal, get_request_id
-from ik_kernel.routers import health, agents, memory, reasoning, planning, retrieval, tools, models, prompts, coding, research, workflows, automations, auth, eval, admin, webhook
+from ik_kernel.routers import (
+    admin,
+    agents,
+    auth,
+    automations,
+    coding,
+    eval,
+    health,
+    memory,
+    models,
+    planning,
+    prompts,
+    reasoning,
+    research,
+    retrieval,
+    tools,
+    webhook,
+    workflows,
+)
 
 logger = structlog.get_logger(__name__)
 
@@ -54,7 +83,9 @@ def configure_logging(settings: Settings) -> None:
             structlog.contextvars.merge_contextvars,
             structlog.processors.add_log_level,
             structlog.processors.TimeStamper(fmt="iso"),
-            structlog.dev.ConsoleRenderer() if settings.debug else structlog.processors.JSONRenderer(),
+            structlog.dev.ConsoleRenderer()
+            if settings.debug
+            else structlog.processors.JSONRenderer(),
         ],
         wrapper_class=structlog.make_filtering_bound_logger(
             getattr(logging, settings.log_level.upper(), logging.INFO)
@@ -97,17 +128,25 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def security_middleware(request: Request, call_next):
         content_length = request.headers.get("content-length")
         try:
-            too_large = content_length is not None and int(content_length) > settings.api_max_body_bytes
+            too_large = (
+                content_length is not None and int(content_length) > settings.api_max_body_bytes
+            )
         except ValueError:
             return JSONResponse(status_code=400, content={"detail": "invalid_content_length"})
         if too_large:
             return JSONResponse(status_code=413, content={"detail": "request_body_too_large"})
         request_id = request.headers.get("X-Request-ID") or get_request_id()
-        if request.url.path not in {"/healthz", "/readyz", "/version"} and not request.url.path.startswith("/metrics"):
+        if request.url.path not in {
+            "/healthz",
+            "/readyz",
+            "/version",
+        } and not request.url.path.startswith("/metrics"):
             limiter = getattr(app.state, "rate_limiter", None)
             if limiter is None and settings.api_rate_limit_per_minute > 0:
                 try:
-                    limiter = RateLimiter(str(settings.redis_url), settings.api_rate_limit_per_minute)
+                    limiter = RateLimiter(
+                        str(settings.redis_url), settings.api_rate_limit_per_minute
+                    )
                     app.state.rate_limiter = limiter
                 except Exception:
                     limiter = None
@@ -115,29 +154,48 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 try:
                     import hashlib
                     import hmac
+
                     credential = request.headers.get("X-API-Key", "")
                     authorization = request.headers.get("Authorization", "")
-                    identity_seed = credential or authorization or (request.client.host if request.client else "unknown")
+                    identity_seed = (
+                        credential
+                        or authorization
+                        or (request.client.host if request.client else "unknown")
+                    )
                     # Never use an untrusted tenant header as the sole limiter identity.
                     # Derive a non-reversible bucket key from the credential/network identity.
                     secret = settings.jwt_secret or "indus-rate-limit-local"
-                    identity = hmac.new(secret.encode(), identity_seed.encode(), hashlib.sha256).hexdigest()
+                    identity = hmac.new(
+                        secret.encode(), identity_seed.encode(), hashlib.sha256
+                    ).hexdigest()
                     allowed, _remaining = await limiter.allow(identity)
                     if not allowed:
-                        return JSONResponse(status_code=429, content={"detail": "rate_limit_exceeded", "retry_after": 60})
+                        return JSONResponse(
+                            status_code=429,
+                            content={"detail": "rate_limit_exceeded", "retry_after": 60},
+                        )
                 except Exception:
                     if settings.environment in {"staging", "production"}:
-                        return JSONResponse(status_code=503, content={"detail": "rate_limiter_unavailable"})
+                        return JSONResponse(
+                            status_code=503, content={"detail": "rate_limiter_unavailable"}
+                        )
         response = await call_next(request)
         response.headers.setdefault("X-Request-ID", request_id)
         response.headers.setdefault("X-Content-Type-Options", "nosniff")
         response.headers.setdefault("X-Frame-Options", "DENY")
         response.headers.setdefault("Referrer-Policy", "no-referrer")
-        response.headers.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
+        response.headers.setdefault(
+            "Permissions-Policy", "camera=(), microphone=(), geolocation=()"
+        )
         if settings.environment in {"staging", "production"}:
-            response.headers.setdefault("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'")
+            response.headers.setdefault(
+                "Content-Security-Policy",
+                "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'",
+            )
         if settings.environment in {"staging", "production"}:
-            response.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+            response.headers.setdefault(
+                "Strict-Transport-Security", "max-age=31536000; includeSubDomains"
+            )
         return response
 
     if settings.api_allowed_hosts and settings.api_allowed_hosts != ["*"]:
@@ -159,16 +217,30 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     protected = {"dependencies": [Depends(get_current_principal)]}
     app.include_router(agents.router, prefix=f"{api_prefix}/agents", tags=["agents"], **protected)
     app.include_router(memory.router, prefix=f"{api_prefix}/memory", tags=["memory"], **protected)
-    app.include_router(reasoning.router, prefix=f"{api_prefix}/reasoning", tags=["reasoning"], **protected)
-    app.include_router(planning.router, prefix=f"{api_prefix}/plans", tags=["planning"], **protected)
-    app.include_router(retrieval.router, prefix=f"{api_prefix}/retrieval", tags=["retrieval"], **protected)
+    app.include_router(
+        reasoning.router, prefix=f"{api_prefix}/reasoning", tags=["reasoning"], **protected
+    )
+    app.include_router(
+        planning.router, prefix=f"{api_prefix}/plans", tags=["planning"], **protected
+    )
+    app.include_router(
+        retrieval.router, prefix=f"{api_prefix}/retrieval", tags=["retrieval"], **protected
+    )
     app.include_router(tools.router, prefix=f"{api_prefix}/tools", tags=["tools"], **protected)
     app.include_router(models.router, prefix=f"{api_prefix}/models", tags=["models"], **protected)
-    app.include_router(prompts.router, prefix=f"{api_prefix}/prompts", tags=["prompts"], **protected)
+    app.include_router(
+        prompts.router, prefix=f"{api_prefix}/prompts", tags=["prompts"], **protected
+    )
     app.include_router(coding.router, prefix=f"{api_prefix}/coding", tags=["coding"], **protected)
-    app.include_router(research.router, prefix=f"{api_prefix}/research", tags=["research"], **protected)
-    app.include_router(workflows.router, prefix=f"{api_prefix}/workflows", tags=["workflows"], **protected)
-    app.include_router(automations.router, prefix=f"{api_prefix}/automations", tags=["automations"], **protected)
+    app.include_router(
+        research.router, prefix=f"{api_prefix}/research", tags=["research"], **protected
+    )
+    app.include_router(
+        workflows.router, prefix=f"{api_prefix}/workflows", tags=["workflows"], **protected
+    )
+    app.include_router(
+        automations.router, prefix=f"{api_prefix}/automations", tags=["automations"], **protected
+    )
     app.include_router(eval.router, prefix=f"{api_prefix}/eval", tags=["eval"], **protected)
     app.include_router(admin.router, prefix=f"{api_prefix}/admin", tags=["admin"], **protected)
     # Webhooks have their own HMAC authentication and are not bearer-authenticated.
@@ -182,6 +254,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @app.exception_handler(Exception)
     async def global_exception_handler(request: Any, exc: Exception) -> JSONResponse:
         import uuid
+
         trace_id = str(uuid.uuid4())
         logger.error(
             "unhandled_exception",

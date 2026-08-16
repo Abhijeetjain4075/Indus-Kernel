@@ -16,7 +16,9 @@ class FewShot(BaseReasoningStrategy):
     async def reason(self, req: ReasoningRequest) -> ReasoningResult:
         started = time.perf_counter()
         router = get_router()
-        messages = [Message(role=MessageRole.SYSTEM, content="You answer in the style of the examples.")]
+        messages = [
+            Message(role=MessageRole.SYSTEM, content="You answer in the style of the examples.")
+        ]
         for ex in req.examples:
             if "question" in ex and "answer" in ex:
                 messages.append(Message(role=MessageRole.USER, content=ex["question"]))

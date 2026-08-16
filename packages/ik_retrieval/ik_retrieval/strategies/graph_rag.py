@@ -23,7 +23,6 @@ from ik_retrieval.types import (
     ScoredChunk,
 )
 
-
 _CAPITALIZED_RE = re.compile(r"\b([A-Z][a-zA-Z]{2,})\b")
 
 

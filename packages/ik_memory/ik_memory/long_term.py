@@ -8,7 +8,7 @@ heavy lifting: fact extraction, dedup, conflict resolution.
 
 from __future__ import annotations
 
-import uuid
+from datetime import UTC
 from typing import Any
 
 from ik_memory.types import Memory, MemoryLayer, MemoryType
@@ -47,8 +47,9 @@ class LongTermMemory:
         for k, v in changes.items():
             if hasattr(mem, k) and v is not None:
                 setattr(mem, k, v)
-        from datetime import datetime, timezone
-        mem.updated_at = datetime.now(timezone.utc)
+        from datetime import datetime
+
+        mem.updated_at = datetime.now(UTC)
         if "embedding" in changes and changes["embedding"] is not None:
             self._vector_index[mem.id] = changes["embedding"]
         return mem
@@ -63,9 +64,7 @@ class LongTermMemory:
             # Remove from other memories' related lists
             for mem in user_store.values():
                 if memory_id in mem.related_memory_ids:
-                    mem.related_memory_ids = [
-                        x for x in mem.related_memory_ids if x != memory_id
-                    ]
+                    mem.related_memory_ids = [x for x in mem.related_memory_ids if x != memory_id]
             return True
         return False
 

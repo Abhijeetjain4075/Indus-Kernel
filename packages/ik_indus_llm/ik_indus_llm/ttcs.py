@@ -21,19 +21,20 @@ Three strategies bundled here, all using the same model:
 """
 
 from __future__ import annotations
+
 import re
 from collections import Counter
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable, List, Optional
 
 import torch
 
 from .model import Indus
 
-
 # ---------------------------------------------------------------------------
 # Generic generation helpers
 # ---------------------------------------------------------------------------
+
 
 @torch.no_grad()
 def sample_n(
@@ -43,7 +44,7 @@ def sample_n(
     max_new_tokens: int = 256,
     temperature: float = 0.8,
     top_k: int = 50,
-) -> List[torch.Tensor]:
+) -> list[torch.Tensor]:
     """Sample N independent completions from the same prompt."""
     completions = []
     for _ in range(n):
@@ -58,10 +59,10 @@ def sample_n(
 
 
 def decode_completions(
-    completions: List[torch.Tensor],
+    completions: list[torch.Tensor],
     prompt_len: int,
     tokenizer,
-) -> List[str]:
+) -> list[str]:
     """Decode each completion, stripping the prompt prefix."""
     texts = []
     for c in completions:
@@ -74,12 +75,13 @@ def decode_completions(
 # 1. Best-of-N
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class BoNResult:
     best: str
     best_idx: int
-    candidates: List[str]
-    scores: List[float]
+    candidates: list[str]
+    scores: list[float]
 
 
 def best_of_n(
@@ -88,10 +90,10 @@ def best_of_n(
     prompt: str,
     n: int = 8,
     max_new_tokens: int = 256,
-    scorer: Optional[Callable[[str], float]] = None,
+    scorer: Callable[[str], float] | None = None,
     temperature: float = 0.8,
     top_k: int = 50,
-    device: Optional[str] = None,
+    device: str | None = None,
 ) -> BoNResult:
     """Sample N, score, return the best.
 
@@ -100,8 +102,9 @@ def best_of_n(
     """
     device = device or next(model.parameters()).device
     idx = torch.tensor([tokenizer.encode(prompt)], dtype=torch.long, device=device)
-    completions = sample_n(model, idx, n=n, max_new_tokens=max_new_tokens,
-                           temperature=temperature, top_k=top_k)
+    completions = sample_n(
+        model, idx, n=n, max_new_tokens=max_new_tokens, temperature=temperature, top_k=top_k
+    )
     texts = decode_completions(completions, idx.size(1), tokenizer)
 
     if scorer is None:
@@ -111,8 +114,7 @@ def best_of_n(
         scores = [scorer(t) for t in texts]
 
     best_idx = max(range(n), key=lambda i: scores[i])
-    return BoNResult(best=texts[best_idx], best_idx=best_idx,
-                     candidates=texts, scores=scores)
+    return BoNResult(best=texts[best_idx], best_idx=best_idx, candidates=texts, scores=scores)
 
 
 def _default_logprob_score(model, completion_ids):
@@ -129,12 +131,13 @@ def _default_logprob_score(model, completion_ids):
 # 2. Self-Consistency
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class SCResult:
     answer: str
     confidence: float
     vote_counts: Counter
-    candidates: List[str]
+    candidates: list[str]
 
 
 def self_consistency(
@@ -143,10 +146,10 @@ def self_consistency(
     prompt: str,
     n: int = 16,
     max_new_tokens: int = 256,
-    answer_extractor: Optional[Callable[[str], str]] = None,
+    answer_extractor: Callable[[str], str] | None = None,
     temperature: float = 0.8,
     top_k: int = 50,
-    device: Optional[str] = None,
+    device: str | None = None,
 ) -> SCResult:
     """Sample N CoT completions, majority-vote on extracted answer."""
     if answer_extractor is None:
@@ -155,8 +158,9 @@ def self_consistency(
 
     device = device or next(model.parameters()).device
     idx = torch.tensor([tokenizer.encode(prompt)], dtype=torch.long, device=device)
-    completions = sample_n(model, idx, n=n, max_new_tokens=max_new_tokens,
-                           temperature=temperature, top_k=top_k)
+    completions = sample_n(
+        model, idx, n=n, max_new_tokens=max_new_tokens, temperature=temperature, top_k=top_k
+    )
     texts = decode_completions(completions, idx.size(1), tokenizer)
     answers = [answer_extractor(t) for t in texts]
     counts = Counter(answers)
@@ -189,12 +193,13 @@ def _default_answer_extractor(text: str) -> str:
 # 3. Verifier-guided search (stub — caller supplies a PRM-like scorer)
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class VerifierResult:
     best: str
     best_idx: int
-    candidates: List[str]
-    scores: List[float]
+    candidates: list[str]
+    scores: list[float]
 
 
 def verifier_guided(
@@ -206,15 +211,15 @@ def verifier_guided(
     max_new_tokens: int = 256,
     temperature: float = 0.8,
     top_k: int = 50,
-    device: Optional[str] = None,
+    device: str | None = None,
 ) -> VerifierResult:
     """Sample N, score with an external verifier, return the best."""
     device = device or next(model.parameters()).device
     idx = torch.tensor([tokenizer.encode(prompt)], dtype=torch.long, device=device)
-    completions = sample_n(model, idx, n=n, max_new_tokens=max_new_tokens,
-                           temperature=temperature, top_k=top_k)
+    completions = sample_n(
+        model, idx, n=n, max_new_tokens=max_new_tokens, temperature=temperature, top_k=top_k
+    )
     texts = decode_completions(completions, idx.size(1), tokenizer)
     scores = [verifier(t) for t in texts]
     best_idx = max(range(n), key=lambda i: scores[i])
-    return VerifierResult(best=texts[best_idx], best_idx=best_idx,
-                          candidates=texts, scores=scores)
+    return VerifierResult(best=texts[best_idx], best_idx=best_idx, candidates=texts, scores=scores)

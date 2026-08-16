@@ -1,4 +1,5 @@
 """Real tests for ik_ttc."""
+
 from ik_ttc import Candidate, majority_vote, select_best, verify_and_select
 
 

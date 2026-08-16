@@ -28,17 +28,16 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
-from typing import Any, Awaitable, Callable
+from collections.abc import Awaitable, Callable
+from typing import Any
 
 from ik_kernel.orchestration.events import (
-    Event,
     ExecutionStarted,
     StepCompleted,
     StepFailed,
     StepStarted,
 )
 from ik_kernel.orchestration.types import (
-    Attempt,
     Execution,
     Observation,
     Plan,
@@ -123,7 +122,9 @@ class Executor:
                 in_flight[s.id] = asyncio.create_task(run_step(s))
 
         while in_flight:
-            done, _pending = await asyncio.wait(in_flight.values(), return_when=asyncio.FIRST_COMPLETED)
+            done, _pending = await asyncio.wait(
+                in_flight.values(), return_when=asyncio.FIRST_COMPLETED
+            )
             for d in done:
                 sid = next(sid for sid, t in in_flight.items() if t is d)
                 del in_flight[sid]
@@ -149,16 +150,24 @@ class Executor:
         """Run a step with retries. Returns the last successful observation, or None."""
         handler = self._handlers.get(step.capability)
         if handler is None:
-            events.append(StepFailed(
-                task_id=task.id, step_id=step.id, attempt=0,
-                error=f"no handler for capability {step.capability!r}",
-            ))
+            events.append(
+                StepFailed(
+                    task_id=task.id,
+                    step_id=step.id,
+                    attempt=0,
+                    error=f"no handler for capability {step.capability!r}",
+                )
+            )
             return None  # step state will be set to FAILED by caller via failed set
         max_attempts = 1 + min(step.max_retries, task.max_retries)
         for attempt_num in range(1, max_attempts + 1):
-            events.append(StepStarted(
-                task_id=task.id, step_id=step.id, attempt=attempt_num,
-            ))
+            events.append(
+                StepStarted(
+                    task_id=task.id,
+                    step_id=step.id,
+                    attempt=attempt_num,
+                )
+            )
             started = time.perf_counter()
             try:
                 output = await asyncio.wait_for(
@@ -167,25 +176,39 @@ class Executor:
                 )
                 elapsed_ms = int((time.perf_counter() - started) * 1000)
                 obs = Observation(
-                    step_id=step.id, output=output,
+                    step_id=step.id,
+                    output=output,
                     cost_cents=self._estimate_cost(step, output),
                     latency_ms=elapsed_ms,
                 )
-                events.append(StepCompleted(
-                    task_id=task.id, step_id=step.id, attempt=attempt_num,
-                    cost_cents=obs.cost_cents, latency_ms=obs.latency_ms,
-                ))
+                events.append(
+                    StepCompleted(
+                        task_id=task.id,
+                        step_id=step.id,
+                        attempt=attempt_num,
+                        cost_cents=obs.cost_cents,
+                        latency_ms=obs.latency_ms,
+                    )
+                )
                 return obs
-            except asyncio.TimeoutError:
-                events.append(StepFailed(
-                    task_id=task.id, step_id=step.id, attempt=attempt_num,
-                    error=f"timeout after {step.timeout_s}s",
-                ))
-            except Exception as e:  # noqa: BLE001
-                events.append(StepFailed(
-                    task_id=task.id, step_id=step.id, attempt=attempt_num,
-                    error=f"{type(e).__name__}: {e}",
-                ))
+            except TimeoutError:
+                events.append(
+                    StepFailed(
+                        task_id=task.id,
+                        step_id=step.id,
+                        attempt=attempt_num,
+                        error=f"timeout after {step.timeout_s}s",
+                    )
+                )
+            except Exception as e:
+                events.append(
+                    StepFailed(
+                        task_id=task.id,
+                        step_id=step.id,
+                        attempt=attempt_num,
+                        error=f"{type(e).__name__}: {e}",
+                    )
+                )
         return None
 
     def _estimate_cost(self, step: PlanStep, output: Any) -> int:

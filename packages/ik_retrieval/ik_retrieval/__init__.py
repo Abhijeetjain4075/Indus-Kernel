@@ -13,26 +13,27 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from ik_retrieval.chunking import Chunker, FixedSizeChunker, SentenceChunker
+from ik_retrieval.engine import RetrievalEngine, get_engine
+from ik_retrieval.strategies.base import BaseRetrievalStrategy
+from ik_retrieval.strategies.bm25_strategy import BM25Strategy
+from ik_retrieval.strategies.colbert import ColBERTReranker
+from ik_retrieval.strategies.crag import CorrectiveRAG
+from ik_retrieval.strategies.graph_rag import GraphRAG
+from ik_retrieval.strategies.hyde import HyDE
+from ik_retrieval.strategies.naive_rag import NaiveRAG
+from ik_retrieval.strategies.raptor import RAPTORRetriever
+from ik_retrieval.strategies.self_rag import SelfRAG
+
 # Re-export the rich engine
 from ik_retrieval.types import (
-    Document,
     Chunk,
+    Document,
     RetrievalQuery,
     RetrievalResult,
     RetrievalStrategy,
     ScoredChunk,
 )
-from ik_retrieval.engine import RetrievalEngine, get_engine
-from ik_retrieval.chunking import Chunker, FixedSizeChunker, SentenceChunker
-from ik_retrieval.strategies.base import BaseRetrievalStrategy
-from ik_retrieval.strategies.naive_rag import NaiveRAG
-from ik_retrieval.strategies.bm25_strategy import BM25Strategy
-from ik_retrieval.strategies.self_rag import SelfRAG
-from ik_retrieval.strategies.crag import CorrectiveRAG
-from ik_retrieval.strategies.graph_rag import GraphRAG
-from ik_retrieval.strategies.raptor import RAPTORRetriever
-from ik_retrieval.strategies.hyde import HyDE
-from ik_retrieval.strategies.colbert import ColBERTReranker
 
 
 # ---------------------------------------------------------------------------

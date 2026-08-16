@@ -6,7 +6,7 @@ Pydantic models for memory objects, queries, and results.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
 
@@ -16,18 +16,18 @@ from pydantic import BaseModel, Field
 class MemoryLayer(str, Enum):
     """The three memory layers (per Cowan's working + Atkinson-Shiffrin)."""
 
-    WORKING = "working"   # in-process, last 16 turns
-    SHORT = "short"      # Redis, per-session, 1-hour TTL
-    LONG = "long"        # Mem0 over PG + Qdrant + Neo4j
+    WORKING = "working"  # in-process, last 16 turns
+    SHORT = "short"  # Redis, per-session, 1-hour TTL
+    LONG = "long"  # Mem0 over PG + Qdrant + Neo4j
 
 
 class MemoryType(str, Enum):
     """Types of long-term memories."""
 
-    EPISODIC = "episodic"    # event: "I went to Paris"
-    SEMANTIC = "semantic"    # fact: "Paris is the capital of France"
+    EPISODIC = "episodic"  # event: "I went to Paris"
+    SEMANTIC = "semantic"  # fact: "Paris is the capital of France"
     PROCEDURAL = "procedural"  # skill: "how to use a hammer"
-    PROFILE = "profile"      # user pref: "user prefers dark mode"
+    PROFILE = "profile"  # user pref: "user prefers dark mode"
     REFLECTION = "reflection"  # meta: "user often asks about cooking"
 
 
@@ -35,10 +35,10 @@ class RetrievalSignal(str, Enum):
     """Signals used by the multi-signal retriever."""
 
     SEMANTIC = "semantic"  # embedding cosine similarity
-    RECENCY = "recency"    # exponential decay over time
+    RECENCY = "recency"  # exponential decay over time
     IMPORTANCE = "importance"  # LLM-judged or heuristic importance score
     GRAPH_DISTANCE = "graph_distance"  # Neo4j graph hop distance from seed
-    BM25 = "bm25"          # lexical match
+    BM25 = "bm25"  # lexical match
 
 
 class Memory(BaseModel):
@@ -56,8 +56,8 @@ class Memory(BaseModel):
     tags: list[str] = Field(default_factory=list)
     metadata: dict[str, Any] = Field(default_factory=dict)
     related_memory_ids: list[str] = Field(default_factory=list)  # Neo4j edges
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     access_count: int = 0
     last_accessed_at: datetime | None = None
 

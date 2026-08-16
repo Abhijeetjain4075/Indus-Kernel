@@ -18,7 +18,6 @@ from ik_reasoning.types import ReasoningRequest, ReasoningResult, ReasoningStep,
 from ik_router.router import get_router
 from ik_router.types import LLMRequest, Message, MessageRole
 
-
 _PLAN_PROMPT = """Decompose the task below into a JSON array of function calls. Each call has:
 - "id": a unique integer
 - "tool": the function name
@@ -54,12 +53,18 @@ class LLMCompiler(BaseReasoningStrategy):
             LLMRequest(
                 messages=[
                     Message(role=MessageRole.SYSTEM, content="You output only valid JSON arrays."),
-                    Message(role=MessageRole.USER, content=_PLAN_PROMPT.format(
-                        question=req.question, tools=tool_names,
-                    )),
+                    Message(
+                        role=MessageRole.USER,
+                        content=_PLAN_PROMPT.format(
+                            question=req.question,
+                            tools=tool_names,
+                        ),
+                    ),
                 ],
                 capability_requirements=["text", "json-mode"],
-                response_format=__import__("ik_router.types", fromlist=["ResponseFormat"]).ResponseFormat(type="json_object"),
+                response_format=__import__(
+                    "ik_router.types", fromlist=["ResponseFormat"]
+                ).ResponseFormat(type="json_object"),
                 temperature=0.0,
             )
         )
@@ -76,13 +81,15 @@ class LLMCompiler(BaseReasoningStrategy):
             if isinstance(data, dict) and "plan" in data:
                 data = data["plan"]
             for item in data:
-                tasks.append(_Task(
-                    id=int(item["id"]),
-                    tool=item["tool"],
-                    args=item.get("args", {}),
-                    depends_on=list(item.get("depends_on", [])),
-                ))
-        except Exception as e:  # noqa: BLE001
+                tasks.append(
+                    _Task(
+                        id=int(item["id"]),
+                        tool=item["tool"],
+                        args=item.get("args", {}),
+                        depends_on=list(item.get("depends_on", [])),
+                    )
+                )
+        except Exception as e:
             return ReasoningResult(
                 request=req,
                 answer=f"(failed to parse plan: {e}; raw: {plan_resp.content[:200]})",
@@ -96,11 +103,18 @@ class LLMCompiler(BaseReasoningStrategy):
         results: dict[int, str] = {}
         completed: set[int] = set()
         while len(completed) < len(tasks):
-            ready = [t for t in tasks if t.id not in completed and all(d in completed for d in t.depends_on)]
+            ready = [
+                t
+                for t in tasks
+                if t.id not in completed and all(d in completed for d in t.depends_on)
+            ]
             if not ready:
                 return ReasoningResult(
-                    request=req, answer="(cycle detected in plan)", steps=steps,
-                    strategy=req.strategy, took_ms=int((time.perf_counter() - started) * 1000),
+                    request=req,
+                    answer="(cycle detected in plan)",
+                    steps=steps,
+                    strategy=req.strategy,
+                    took_ms=int((time.perf_counter() - started) * 1000),
                     rationale="cycle",
                 )
             # Run ready tasks in parallel
@@ -110,18 +124,27 @@ class LLMCompiler(BaseReasoningStrategy):
                 t.result = out
                 results[t.id] = out
                 completed.add(t.id)
-                steps.append(ReasoningStep(type="action", content=f"{t.tool}({t.args}) -> {out[:100]}"))
+                steps.append(
+                    ReasoningStep(type="action", content=f"{t.tool}({t.args}) -> {out[:100]}")
+                )
 
         # 3. Final answer (synthesize)
         final_resp = await router.complete(
             LLMRequest(
                 messages=[
-                    Message(role=MessageRole.SYSTEM, content="You synthesize tool results into an answer."),
-                    Message(role=MessageRole.USER, content=(
-                        f"Question: {req.question}\n\n"
-                        f"Tool results:\n" + "\n".join(f"- {t.tool}: {t.result}" for t in tasks)
-                        + "\n\nFinal answer:"
-                    )),
+                    Message(
+                        role=MessageRole.SYSTEM,
+                        content="You synthesize tool results into an answer.",
+                    ),
+                    Message(
+                        role=MessageRole.USER,
+                        content=(
+                            f"Question: {req.question}\n\n"
+                            f"Tool results:\n"
+                            + "\n".join(f"- {t.tool}: {t.result}" for t in tasks)
+                            + "\n\nFinal answer:"
+                        ),
+                    ),
                 ],
                 capability_requirements=["text"],
                 temperature=0.0,
@@ -145,6 +168,6 @@ class LLMCompiler(BaseReasoningStrategy):
                     if asyncio.iscoroutine(result):
                         result = await result
                     return str(result)
-                except Exception as e:  # noqa: BLE001
+                except Exception as e:
                     return f"error: {e}"
         return f"error: tool '{task.tool}' not registered"

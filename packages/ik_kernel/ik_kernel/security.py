@@ -1,9 +1,9 @@
 """Production authentication, authorization and request security primitives."""
+
 from __future__ import annotations
 
 import hashlib
 import hmac
-import os
 import secrets
 from dataclasses import dataclass
 from functools import lru_cache
@@ -40,7 +40,9 @@ def _parse_api_keys(raw: str) -> dict[str, ApiPrincipal]:
     for item in raw.split(","):
         parts = item.strip().split(":", 5)
         if len(parts) not in (5, 6):
-            raise ValueError("INDUS_API_KEYS entries must be key_id:secret:tenant:roles:scopes[:user_id]")
+            raise ValueError(
+                "INDUS_API_KEYS entries must be key_id:secret:tenant:roles:scopes[:user_id]"
+            )
         key_id, secret, tenant, roles, scopes = parts[:5]
         user_id = parts[5] if len(parts) == 6 and parts[5] else None
         if not key_id or not secret or not tenant:

@@ -59,7 +59,7 @@ class FallbackChain:
                 response.fallback_used = len(fallbacks_taken) > 0
                 response.fallbacks_taken = fallbacks_taken
                 return response
-            except Exception as e:  # noqa: BLE001
+            except Exception as e:
                 last_error = e
                 logger.warning(f"fallback: model {model} failed: {e}")
                 fallbacks_taken.append(model)

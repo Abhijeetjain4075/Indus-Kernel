@@ -9,8 +9,8 @@ These are deterministic, no LLM needed.
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass, field
-from typing import Iterable
 
 
 @dataclass(frozen=True)
@@ -23,7 +23,9 @@ class EvalResult:
     details: dict = field(default_factory=dict)
 
 
-def exact_match(prediction: str, expected: str, *, case_sensitive: bool = False, strip: bool = True) -> EvalResult:
+def exact_match(
+    prediction: str, expected: str, *, case_sensitive: bool = False, strip: bool = True
+) -> EvalResult:
     """Check exact match between prediction and expected.
 
     Args:
@@ -65,4 +67,4 @@ def aggregate(results: Iterable[EvalResult]) -> dict:
     }
 
 
-__all__ = ["EvalResult", "exact_match", "aggregate"]
+__all__ = ["EvalResult", "aggregate", "exact_match"]

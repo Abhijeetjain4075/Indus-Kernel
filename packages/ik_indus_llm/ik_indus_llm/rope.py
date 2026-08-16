@@ -9,8 +9,8 @@ relative-position bias without learned position tables.
 """
 
 from __future__ import annotations
+
 import math
-from typing import Optional, Tuple
 
 import torch
 
@@ -19,11 +19,11 @@ def precompute_rope_cache(
     head_dim: int,
     max_seq_len: int,
     theta: float = 10000.0,
-    device: Optional[torch.device] = None,
+    device: torch.device | None = None,
     dtype: torch.dtype = torch.float32,
-    rope_scaling: Optional[dict] = None,
-    original_max_seq_len: Optional[int] = None,
-) -> Tuple[torch.Tensor, torch.Tensor]:
+    rope_scaling: dict | None = None,
+    original_max_seq_len: int | None = None,
+) -> tuple[torch.Tensor, torch.Tensor]:
     """Precompute cos/sin tables for RoPE.
 
     Args:
@@ -95,6 +95,7 @@ def apply_rope(
 # ---------------------------------------------------------------------------
 # LongRoPE — non-uniform frequency rescaling for >context extension
 # ---------------------------------------------------------------------------
+
 
 def longrope_scale_freqs(
     freqs: torch.Tensor,

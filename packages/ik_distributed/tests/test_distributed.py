@@ -1,6 +1,7 @@
 """Real tests for ik_distributed."""
+
 import pytest
-from ik_distributed import Job, DistributedRuntime
+from ik_distributed import DistributedRuntime, Job
 
 
 class TestDistributedRuntime:

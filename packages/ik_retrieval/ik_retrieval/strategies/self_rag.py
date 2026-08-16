@@ -22,7 +22,6 @@ from ik_retrieval.types import (
 from ik_router.router import get_router
 from ik_router.types import LLMRequest, Message, MessageRole
 
-
 _JUDGE_PROMPT = """You are a relevance judge. For the QUESTION and CRETRIEVAL CHUNK below, reply with exactly one of:
 - RELEVANT: the chunk contains information that helps answer the question
 - PARTIAL: the chunk is on-topic but only partially answers
@@ -49,8 +48,16 @@ class SelfRAG:
             resp = await router.complete(
                 LLMRequest(
                     messages=[
-                        Message(role=MessageRole.SYSTEM, content="You are a relevance judge. Reply with one of: RELEVANT, PARTIAL, IRRELEVANT."),
-                        Message(role=MessageRole.USER, content=_JUDGE_PROMPT.format(question=question, chunk=chunk.content[:1000])),
+                        Message(
+                            role=MessageRole.SYSTEM,
+                            content="You are a relevance judge. Reply with one of: RELEVANT, PARTIAL, IRRELEVANT.",
+                        ),
+                        Message(
+                            role=MessageRole.USER,
+                            content=_JUDGE_PROMPT.format(
+                                question=question, chunk=chunk.content[:1000]
+                            ),
+                        ),
                     ],
                     capability_requirements=["text"],
                     temperature=0.0,
@@ -63,11 +70,12 @@ class SelfRAG:
             if "PARTIAL" in verdict:
                 return "PARTIAL"
             return "IRRELEVANT"
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             # If LLM is not configured, fall back to assuming the chunk is relevant
             # (so retrieval still works; users see results).
             # We log this so it's visible.
             import logging
+
             logging.warning(f"self_rag: judge failed ({e}); accepting chunk as PARTIAL")
             return "PARTIAL"
 

@@ -21,11 +21,10 @@ The orchestrator enforces the kernel invariants:
 
 from __future__ import annotations
 
-import asyncio
 import logging
 import time
-from typing import Any
 
+from ik_kernel.orchestration.evaluator import Evaluator
 from ik_kernel.orchestration.events import (
     Event,
     ExecutionCompleted,
@@ -34,9 +33,7 @@ from ik_kernel.orchestration.events import (
     ReplanRequested,
     TaskCreated,
     TaskPlanned,
-    make_event,
 )
-from ik_kernel.orchestration.evaluator import Evaluator
 from ik_kernel.orchestration.executor import Executor
 from ik_kernel.orchestration.planner import Planner
 from ik_kernel.orchestration.types import (
@@ -45,7 +42,6 @@ from ik_kernel.orchestration.types import (
     Execution,
     FinalResult,
     Plan,
-    Replan,
     TaskSpec,
     TaskStatus,
 )
@@ -81,34 +77,40 @@ class Orchestrator:
         """Capability: reason via the LLM Router (INVARIANT 2)."""
         from ik_router.router import get_router
         from ik_router.types import LLMRequest, Message, MessageRole
+
         router = get_router()
         goal = step.args.get("goal", task.goal)
-        resp = await router.complete(LLMRequest(
-            messages=[Message(role=MessageRole.USER, content=goal)],
-            capability_requirements=["text"],
-            tenant_id=task.tenant_id,
-            metadata={"agent": "orchestrator", "step": step.id, "task": task.id},
-            max_tokens=step.args.get("max_tokens", 512),
-        ))
+        resp = await router.complete(
+            LLMRequest(
+                messages=[Message(role=MessageRole.USER, content=goal)],
+                capability_requirements=["text"],
+                tenant_id=task.tenant_id,
+                metadata={"agent": "orchestrator", "step": step.id, "task": task.id},
+                max_tokens=step.args.get("max_tokens", 512),
+            )
+        )
         return resp.content
 
     async def _cap_llm_synthesize(self, step, task, ctx) -> str:
         """Capability: synthesize a final response via the LLM Router."""
         from ik_router.router import get_router
         from ik_router.types import LLMRequest, Message, MessageRole
+
         router = get_router()
         goal = step.args.get("goal", task.goal)
         # Get previous step outputs
         previous = ctx.get("previous", {})
         body = "\n\n".join(f"[{sid}]: {val}" for sid, val in previous.items())
         prompt = f"Goal: {goal}\n\nWorking notes:\n{body}\n\nFinal answer:"
-        resp = await router.complete(LLMRequest(
-            messages=[Message(role=MessageRole.USER, content=prompt)],
-            capability_requirements=["text"],
-            tenant_id=task.tenant_id,
-            metadata={"agent": "orchestrator", "step": step.id, "task": task.id},
-            max_tokens=step.args.get("max_tokens", 1024),
-        ))
+        resp = await router.complete(
+            LLMRequest(
+                messages=[Message(role=MessageRole.USER, content=prompt)],
+                capability_requirements=["text"],
+                tenant_id=task.tenant_id,
+                metadata={"agent": "orchestrator", "step": step.id, "task": task.id},
+                max_tokens=step.args.get("max_tokens", 1024),
+            )
+        )
         return resp.content
 
     async def _cap_memory_search(self, step, task, ctx) -> str:
@@ -116,21 +118,31 @@ class Orchestrator:
         try:
             from ik_memory.engine import get_engine
             from ik_memory.types import MemoryQuery, RetrievalSignal
+
             engine = get_engine()
             query = step.args.get("query", task.goal)
-            result = engine.search(MemoryQuery(
-                user_id=task.user_id,
-                query=query,
-                top_k=step.args.get("top_k", 5),
-                signals=[RetrievalSignal.SEMANTIC, RetrievalSignal.RECENCY, RetrievalSignal.IMPORTANCE],
-            ))
-            return "\n".join(f"- {r.memory.content}" for r in result.results) or "(no memories found)"
-        except Exception as e:  # noqa: BLE001
+            result = engine.search(
+                MemoryQuery(
+                    user_id=task.user_id,
+                    query=query,
+                    top_k=step.args.get("top_k", 5),
+                    signals=[
+                        RetrievalSignal.SEMANTIC,
+                        RetrievalSignal.RECENCY,
+                        RetrievalSignal.IMPORTANCE,
+                    ],
+                )
+            )
+            return (
+                "\n".join(f"- {r.memory.content}" for r in result.results) or "(no memories found)"
+            )
+        except Exception as e:
             return f"(memory search unavailable: {e})"
 
     async def _cap_tool_execute(self, step, task, ctx) -> str:
         """Capability: execute a registered tool (INVARIANT 4)."""
         from ik_tools import registry as default_registry
+
         name = step.args.get("tool_name")
         if not name:
             return "error: tool_name required"
@@ -140,7 +152,7 @@ class Orchestrator:
             return str(default_registry.call(name, **kwargs))
         except KeyError:
             return f"error: tool '{name}' not registered"
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             return f"error: {e}"
 
     async def run(self, task: TaskSpec) -> FinalResult:
@@ -163,8 +175,12 @@ class Orchestrator:
         while replan_count <= task.max_retries:
             # 1. Plan
             plan = await self.planner.plan(task)
-            self._events.append(TaskPlanned(task_id=task.id, plan_id=plan.id, n_steps=len(plan.steps)))
-            self._events.append(PlanValidated(task_id=task.id, plan_id=plan.id, version=plan.version))
+            self._events.append(
+                TaskPlanned(task_id=task.id, plan_id=plan.id, n_steps=len(plan.steps))
+            )
+            self._events.append(
+                PlanValidated(task_id=task.id, plan_id=plan.id, version=plan.version)
+            )
 
             # 2. Execute
             execution = await self.executor.run(task, plan, self._events)
@@ -180,44 +196,67 @@ class Orchestrator:
                     continue
                 ev = self.evaluator.evaluate_step(s.spec.id, s.final_observation, task)
                 step_evals.append(ev)
-                self._events.append(Event(
-                    type="EvaluationCompleted",
-                    correlation_id=task.id,
-                    payload={"target_id": ev.target_id, "outcome": ev.outcome.value, "score": ev.score},
-                ))
+                self._events.append(
+                    Event(
+                        type="EvaluationCompleted",
+                        correlation_id=task.id,
+                        payload={
+                            "target_id": ev.target_id,
+                            "outcome": ev.outcome.value,
+                            "score": ev.score,
+                        },
+                    )
+                )
             all_evaluations.extend(step_evals)
 
             # 4. Decide: pass, replan, fail, abort?
             task_eval = self.evaluator.evaluate_task(
-                task, final_output=execution.final_result,
+                task,
+                final_output=execution.final_result,
                 step_evaluations=step_evals,
                 total_cost_cents=total_cost,
                 total_latency_ms=int((time.perf_counter() - started) * 1000),
             )
             all_evaluations.append(task_eval)
-            self._events.append(Event(
-                type="EvaluationCompleted",
-                correlation_id=task.id,
-                payload={"target_id": task.id, "outcome": task_eval.outcome.value, "score": task_eval.score},
-            ))
+            self._events.append(
+                Event(
+                    type="EvaluationCompleted",
+                    correlation_id=task.id,
+                    payload={
+                        "target_id": task.id,
+                        "outcome": task_eval.outcome.value,
+                        "score": task_eval.score,
+                    },
+                )
+            )
 
             if task_eval.outcome == EvaluationOutcome.PASS:
                 execution.status = TaskStatus.COMPLETED
                 execution.final_result = self._synthesize_result(execution)
                 break
             if task_eval.outcome in (EvaluationOutcome.FAIL, EvaluationOutcome.ABORT):
-                execution.status = TaskStatus.FAILED if task_eval.outcome == EvaluationOutcome.FAIL else TaskStatus.FAILED
+                execution.status = (
+                    TaskStatus.FAILED
+                    if task_eval.outcome == EvaluationOutcome.FAIL
+                    else TaskStatus.FAILED
+                )
                 self._events.append(ExecutionFailed(task_id=task.id, reason=task_eval.reason))
                 break
             if task_eval.outcome in (EvaluationOutcome.REPLAN, EvaluationOutcome.RETRY):
                 if replan_count >= task.max_retries:
                     execution.status = TaskStatus.FAILED
-                    self._events.append(ExecutionFailed(task_id=task.id, reason="max replans exceeded"))
+                    self._events.append(
+                        ExecutionFailed(task_id=task.id, reason="max replans exceeded")
+                    )
                     break
                 replan_count += 1
-                self._events.append(ReplanRequested(
-                    task_id=task.id, reason=task_eval.reason, replan_count=replan_count,
-                ))
+                self._events.append(
+                    ReplanRequested(
+                        task_id=task.id,
+                        reason=task_eval.reason,
+                        replan_count=replan_count,
+                    )
+                )
                 plan = await self.planner.replan(task, plan, task_eval.reason)
                 # Continue the loop with the new plan
                 continue
@@ -228,11 +267,13 @@ class Orchestrator:
 
         total_latency_ms = int((time.perf_counter() - started) * 1000)
         if execution is not None:
-            self._events.append(ExecutionCompleted(
-                task_id=task.id,
-                status=execution.status.value,
-                total_cost_cents=total_cost,
-            ))
+            self._events.append(
+                ExecutionCompleted(
+                    task_id=task.id,
+                    status=execution.status.value,
+                    total_cost_cents=total_cost,
+                )
+            )
 
         assert plan is not None
         assert execution is not None

@@ -1,6 +1,7 @@
 """Real tests for ik_tools."""
+
 import pytest
-from ik_tools import ToolSpec, ToolRegistry, registry
+from ik_tools import ToolRegistry, ToolSpec, registry
 
 
 class TestToolRegistry:

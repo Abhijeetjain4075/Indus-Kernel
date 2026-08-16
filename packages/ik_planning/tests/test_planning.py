@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import pytest
-
 from ik_planning import Plan, PlanStep, create_plan
 
 
@@ -30,12 +29,15 @@ class TestPlan:
             Plan("g", [PlanStep("a", "A", ["b"]), PlanStep("b", "B", ["a"])]).validate()
 
     def test_topological_order(self):
-        p = Plan("g", [
-            PlanStep("a", "A"),
-            PlanStep("b", "B", ["a"]),
-            PlanStep("c", "C", ["a"]),
-            PlanStep("d", "D", ["b", "c"]),
-        ])
+        p = Plan(
+            "g",
+            [
+                PlanStep("a", "A"),
+                PlanStep("b", "B", ["a"]),
+                PlanStep("c", "C", ["a"]),
+                PlanStep("d", "D", ["b", "c"]),
+            ],
+        )
         order = p.topological_order()
         assert order[0] == "a"
         assert order[-1] == "d"

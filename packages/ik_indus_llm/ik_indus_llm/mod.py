@@ -23,14 +23,14 @@ Notes:
 """
 
 from __future__ import annotations
+
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
-from .config import IndusConfig
-from .norms import RMSNorm
 from .attention import GroupedQueryAttention
+from .config import IndusConfig
 from .moe import DenseFFN
+from .norms import RMSNorm
 
 
 class MoDLayer(nn.Module):
@@ -46,6 +46,7 @@ class MoDLayer(nn.Module):
     The chosen tokens carry their routing weights as multiplicative
     scaling so the layer's total contribution is approximately constant.
     """
+
     def __init__(self, cfg: IndusConfig, capacity_factor: float = 0.5):
         super().__init__()
         self.capacity_factor = capacity_factor
@@ -56,13 +57,15 @@ class MoDLayer(nn.Module):
         # Router: scalar per token
         self.router = nn.Linear(cfg.n_embd, 1, bias=False)
 
-    def forward(self, x: torch.Tensor, cos: torch.Tensor, sin: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+    def forward(
+        self, x: torch.Tensor, cos: torch.Tensor, sin: torch.Tensor
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         B, T, C = x.shape
         capacity = max(1, int(self.capacity_factor * T))
 
         # Router logits per token
         router_logits = self.router(x.detach())  # [B, T, 1]  — detached so the router
-                                                  # doesn't fight the rest of the model
+        # doesn't fight the rest of the model
         router_probs = torch.sigmoid(router_logits.squeeze(-1))  # [B, T]
 
         # Pick top-k tokens per batch element
@@ -75,7 +78,7 @@ class MoDLayer(nn.Module):
         # ---- Run the full block only on the chosen tokens ----
         # Gather
         idx_expand = topk_idx.unsqueeze(-1).expand(-1, -1, C)  # [B, cap, C]
-        x_chosen = torch.gather(x, 1, idx_expand)              # [B, cap, C]
+        x_chosen = torch.gather(x, 1, idx_expand)  # [B, cap, C]
 
         # Full block on chosen tokens
         y_chosen = x_chosen + self.attn(self.attn_norm(x_chosen), cos, sin)

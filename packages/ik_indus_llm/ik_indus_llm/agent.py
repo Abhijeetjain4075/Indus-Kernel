@@ -13,16 +13,15 @@ The agent runs a loop:
 """
 
 from __future__ import annotations
+
 import json
 import re
 from dataclasses import dataclass, field
-from typing import List, Dict, Optional, Tuple
 
 import torch
 
 from .model import Indus
 from .tools import ToolRegistry
-
 
 # ---------------------------------------------------------------------------
 # Prompt templates
@@ -48,19 +47,19 @@ When you have the answer, use Finish. Don't keep reasoning after Finish.
 @dataclass
 class AgentStep:
     thought: str
-    action: Optional[str] = None
-    action_input: Optional[Dict] = None
-    observation: Optional[str] = None
+    action: str | None = None
+    action_input: dict | None = None
+    observation: str | None = None
     is_final: bool = False
-    final_answer: Optional[str] = None
+    final_answer: str | None = None
 
 
 @dataclass
 class AgentTrace:
     question: str
-    steps: List[AgentStep] = field(default_factory=list)
-    reflections: List[str] = field(default_factory=list)
-    final_answer: Optional[str] = None
+    steps: list[AgentStep] = field(default_factory=list)
+    reflections: list[str] = field(default_factory=list)
+    final_answer: str | None = None
     success: bool = False
 
 
@@ -121,6 +120,7 @@ def parse_step(text: str) -> AgentStep:
 # The Agent
 # ---------------------------------------------------------------------------
 
+
 class IndusAgent:
     """A ReAct-style agent that drives an Indus model with a tool registry.
 
@@ -133,15 +133,16 @@ class IndusAgent:
             append observation to history
             if we keep failing: trigger Reflexion (ask the model to reflect)
     """
+
     def __init__(
         self,
         model: Indus,
         tokenizer,
-        tools: Optional[ToolRegistry] = None,
+        tools: ToolRegistry | None = None,
         max_steps: int = 8,
-        reflect_after: int = 2,        # trigger Reflexion after this many repeated failures
+        reflect_after: int = 2,  # trigger Reflexion after this many repeated failures
         temperature: float = 0.7,
-        device: Optional[str] = None,
+        device: str | None = None,
     ):
         self.model = model
         self.tokenizer = tokenizer
@@ -155,21 +156,24 @@ class IndusAgent:
     def _generate(self, prompt: str, max_tokens: int = 200) -> str:
         ids = self.tokenizer.encode(prompt)
         if len(ids) > self.model.cfg.block_size - max_tokens - 4:
-            ids = ids[-(self.model.cfg.block_size - max_tokens - 4):]
+            ids = ids[-(self.model.cfg.block_size - max_tokens - 4) :]
         idx = torch.tensor([ids], dtype=torch.long, device=self.device)
         # Use slightly higher temperature for the tiny model — at 0.4 it
         # collapses to whitespace-only continuations. Production-size
         # models (1B+) should use 0.2-0.4.
         temp = self.temperature if hasattr(self, "temperature") else 0.7
         out = self.model.generate(
-            idx, max_new_tokens=max_tokens,
-            temperature=temp, top_k=20, top_p=0.9,
+            idx,
+            max_new_tokens=max_tokens,
+            temperature=temp,
+            top_k=20,
+            top_p=0.9,
             eos_token_id=self.tokenizer.eos_token_id,
         )
-        new_ids = out[0].tolist()[len(ids):]
+        new_ids = out[0].tolist()[len(ids) :]
         return self.tokenizer.decode(new_ids)
 
-    def _format_history(self, question: str, steps: List[AgentStep]) -> str:
+    def _format_history(self, question: str, steps: list[AgentStep]) -> str:
         out = [f"Question: {question}\n"]
         # Choose step label — digits or spelled-out, depending on vocab
         use_digits = True
@@ -179,7 +183,7 @@ class IndusAgent:
             except KeyError:
                 use_digits = False
         for i, s in enumerate(steps):
-            label = f"Step {i+1}:" if use_digits else f"Step number {self._num_word(i+1)}:"
+            label = f"Step {i + 1}:" if use_digits else f"Step number {self._num_word(i + 1)}:"
             out.append(label)
             out.append(f"Thought: {s.thought}")
             if s.action:
@@ -192,11 +196,22 @@ class IndusAgent:
 
     @staticmethod
     def _num_word(n: int) -> str:
-        words = ["zero", "one", "two", "three", "four", "five",
-                 "six", "seven", "eight", "nine", "ten"]
+        words = [
+            "zero",
+            "one",
+            "two",
+            "three",
+            "four",
+            "five",
+            "six",
+            "seven",
+            "eight",
+            "nine",
+            "ten",
+        ]
         return words[n] if 0 <= n < len(words) else str(n)
 
-    def _reflect(self, question: str, steps: List[AgentStep]) -> str:
+    def _reflect(self, question: str, steps: list[AgentStep]) -> str:
         """Reflexion: ask the model why it failed and what to do instead."""
         history = self._format_history(question, steps)
         prompt = (
@@ -207,14 +222,13 @@ class IndusAgent:
         )
         return self._generate(prompt, max_tokens=120)
 
-
     def run(self, question: str) -> AgentTrace:
         """Execute the agent on a question. Returns the full trace."""
         trace = AgentTrace(question=question)
         system = AGENT_SYSTEM_PROMPT.format(tools=self.tools.descriptions())
 
         # Track the last few observations for failure detection
-        recent_obs: List[str] = []
+        recent_obs: list[str] = []
         reflections_used = 0
 
         for step_idx in range(self.max_steps):
@@ -240,9 +254,11 @@ class IndusAgent:
                 trace.steps.append(step)
                 recent_obs.append(obs)
                 # Reflexion: if we keep getting the same observation, reflect
-                if len(recent_obs) >= self.reflect_after and \
-                        len(set(recent_obs[-self.reflect_after:])) == 1 and \
-                        reflections_used < 1:
+                if (
+                    len(recent_obs) >= self.reflect_after
+                    and len(set(recent_obs[-self.reflect_after :])) == 1
+                    and reflections_used < 1
+                ):
                     refl = self._reflect(question, trace.steps)
                     trace.reflections.append(refl)
                     recent_obs = []
@@ -254,7 +270,7 @@ class IndusAgent:
         return trace
 
     # ---- introspection helpers ----
-    def status(self) -> Dict:
+    def status(self) -> dict:
         return {
             "model": type(self.model).__name__,
             "tools": self.tools.names(),

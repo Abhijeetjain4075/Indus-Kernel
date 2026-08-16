@@ -18,9 +18,7 @@ class WorkingMemory:
 
     def __init__(self, max_turns: int = 16) -> None:
         self.max_turns = max_turns
-        self._buffers: dict[str, deque[Memory]] = defaultdict(
-            lambda: deque(maxlen=self.max_turns)
-        )
+        self._buffers: dict[str, deque[Memory]] = defaultdict(lambda: deque(maxlen=self.max_turns))
 
     def add(self, session_id: str, role: str, content: str, **kwargs: Any) -> Memory:
         """Append a turn to working memory."""

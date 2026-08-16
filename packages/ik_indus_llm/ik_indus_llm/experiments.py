@@ -13,17 +13,19 @@ SQLite or any external DB if the project grows.
 """
 
 from __future__ import annotations
+
+import builtins
 import json
 import platform
 import subprocess
 import time
 import uuid
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 
-def _git_sha() -> Optional[str]:
+def _git_sha() -> str | None:
     """Best-effort current git SHA. Returns None if not in a git repo."""
     try:
         out = subprocess.check_output(
@@ -36,7 +38,7 @@ def _git_sha() -> Optional[str]:
         return None
 
 
-def _env_metadata() -> Dict[str, Any]:
+def _env_metadata() -> dict[str, Any]:
     """Snapshot of the environment for reproducibility."""
     md = {
         "python": platform.python_version(),
@@ -45,6 +47,7 @@ def _env_metadata() -> Dict[str, Any]:
     }
     try:
         import torch
+
         md["torch"] = torch.__version__
         md["cuda_available"] = torch.cuda.is_available()
         if torch.cuda.is_available():
@@ -60,6 +63,7 @@ def _env_metadata() -> Dict[str, Any]:
 @dataclass
 class Experiment:
     """A single recorded experiment."""
+
     id: str
     name: str
     status: str  # "planned" | "running" | "completed" | "failed" | "interrupted"
@@ -79,22 +83,22 @@ class Experiment:
     dataset_hash: str = ""
     tokenizer_version: str = ""
     architecture: str = ""
-    hyperparameters: Dict[str, Any] = field(default_factory=dict)
+    hyperparameters: dict[str, Any] = field(default_factory=dict)
 
     # Results
-    training_loss: Optional[float] = None
-    validation_loss: Optional[float] = None
-    perplexity: Optional[float] = None
-    benchmark_results: Dict[str, Any] = field(default_factory=dict)
+    training_loss: float | None = None
+    validation_loss: float | None = None
+    perplexity: float | None = None
+    benchmark_results: dict[str, Any] = field(default_factory=dict)
 
     # Operational
-    start_time: Optional[float] = None
-    end_time: Optional[float] = None
-    duration_seconds: Optional[float] = None
-    checkpoint_path: Optional[str] = None
-    failure_reason: Optional[str] = None
-    environment: Dict[str, Any] = field(default_factory=dict)
-    tags: List[str] = field(default_factory=list)
+    start_time: float | None = None
+    end_time: float | None = None
+    duration_seconds: float | None = None
+    checkpoint_path: str | None = None
+    failure_reason: str | None = None
+    environment: dict[str, Any] = field(default_factory=dict)
+    tags: list[str] = field(default_factory=list)
 
 
 class ExperimentRegistry:
@@ -103,10 +107,11 @@ class ExperimentRegistry:
     Storage: JSONL file (one experiment per line). Easy to grep, diff,
     and load. Swap with a database if/when scale demands it.
     """
+
     def __init__(self, path: str = "experiments.jsonl"):
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        self._cache: List[Experiment] = []
+        self._cache: list[Experiment] = []
         self._load()
 
     def _load(self):
@@ -130,7 +135,7 @@ class ExperimentRegistry:
         baseline: str = "",
         model_version: str = "",
         dataset_version: str = "",
-        tags: Optional[List[str]] = None,
+        tags: builtins.list[str] | None = None,
     ) -> Experiment:
         exp = Experiment(
             id=str(uuid.uuid4())[:8],
@@ -149,7 +154,7 @@ class ExperimentRegistry:
         self._append(exp)
         return exp
 
-    def start(self, exp: Experiment, hyperparameters: Optional[Dict] = None) -> Experiment:
+    def start(self, exp: Experiment, hyperparameters: dict | None = None) -> Experiment:
         exp.status = "running"
         exp.start_time = time.time()
         if hyperparameters:
@@ -160,17 +165,17 @@ class ExperimentRegistry:
     def complete(
         self,
         exp: Experiment,
-        training_loss: Optional[float] = None,
-        validation_loss: Optional[float] = None,
-        perplexity: Optional[float] = None,
-        benchmark_results: Optional[Dict] = None,
-        checkpoint_path: Optional[str] = None,
+        training_loss: float | None = None,
+        validation_loss: float | None = None,
+        perplexity: float | None = None,
+        benchmark_results: dict | None = None,
+        checkpoint_path: str | None = None,
         decision: str = "",
         result: str = "",
     ) -> Experiment:
         exp.status = "completed"
         exp.end_time = time.time()
-        exp.duration_seconds = (exp.end_time - (exp.start_time or exp.end_time))
+        exp.duration_seconds = exp.end_time - (exp.start_time or exp.end_time)
         if training_loss is not None:
             exp.training_loss = training_loss
         if validation_loss is not None:
@@ -192,7 +197,7 @@ class ExperimentRegistry:
         exp.status = "failed"
         exp.failure_reason = reason
         exp.end_time = time.time()
-        exp.duration_seconds = (exp.end_time - (exp.start_time or exp.end_time))
+        exp.duration_seconds = exp.end_time - (exp.start_time or exp.end_time)
         self._rewrite()
         return exp
 
@@ -200,7 +205,7 @@ class ExperimentRegistry:
         exp.status = "interrupted"
         exp.failure_reason = reason
         exp.end_time = time.time()
-        exp.duration_seconds = (exp.end_time - (exp.start_time or exp.end_time))
+        exp.duration_seconds = exp.end_time - (exp.start_time or exp.end_time)
         self._rewrite()
         return exp
 
@@ -211,7 +216,7 @@ class ExperimentRegistry:
                 f.write(json.dumps(asdict(e)) + "\n")
 
     # ---- queries ----
-    def list(self, status: Optional[str] = None, tag: Optional[str] = None) -> List[Experiment]:
+    def list(self, status: str | None = None, tag: str | None = None) -> builtins.list[Experiment]:
         out = list(self._cache)
         if status:
             out = [e for e in out if e.status == status]
@@ -219,13 +224,13 @@ class ExperimentRegistry:
             out = [e for e in out if tag in e.tags]
         return out
 
-    def latest(self) -> Optional[Experiment]:
+    def latest(self) -> Experiment | None:
         return self._cache[-1] if self._cache else None
 
-    def by_model(self, model_version: str) -> List[Experiment]:
+    def by_model(self, model_version: str) -> builtins.list[Experiment]:
         return [e for e in self._cache if e.model_version == model_version]
 
-    def summary(self) -> Dict[str, Any]:
+    def summary(self) -> dict[str, Any]:
         n_total = len(self._cache)
         by_status = {}
         for e in self._cache:

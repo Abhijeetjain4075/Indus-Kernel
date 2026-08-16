@@ -19,7 +19,10 @@ class ZeroShot(BaseReasoningStrategy):
         resp = await router.complete(
             LLMRequest(
                 messages=[
-                    Message(role=MessageRole.SYSTEM, content="You answer questions directly and concisely."),
+                    Message(
+                        role=MessageRole.SYSTEM,
+                        content="You answer questions directly and concisely.",
+                    ),
                     Message(role=MessageRole.USER, content=req.question),
                 ],
                 model_hint=req.model_hint,

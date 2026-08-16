@@ -10,11 +10,9 @@ from pathlib import Path
 
 import pytest
 import torch
-
 from ik_indus_llm.config import IndusConfig
 from ik_indus_llm.model import Indus
 from ik_indus_llm.runtime import IndusLLMRuntime
-
 
 CHECKPOINT = Path(
     "packages/ik_indus_llm/ik_indus_llm/artifacts/checkpoints/pretrain/indus_tiny_v0.3.0.pt"

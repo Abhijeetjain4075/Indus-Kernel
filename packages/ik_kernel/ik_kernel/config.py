@@ -153,7 +153,7 @@ class Settings(BaseSettings):
     schemas_dir: str = "./schemas"
 
     @model_validator(mode="after")
-    def validate_runtime_security(self) -> "Settings":
+    def validate_runtime_security(self) -> Settings:
         if self.environment in {"staging", "production"}:
             if self.debug:
                 raise ValueError("debug must be false in staging/production")
@@ -168,7 +168,10 @@ class Settings(BaseSettings):
             object.__setattr__(self, "strict_startup", True)
             if "*" in self.api_allowed_hosts:
                 raise ValueError("wildcard allowed hosts are forbidden in staging/production")
-            if any(v in {"indus", "indus-secret", "indus-dev-secret-change-in-prod"} for v in [self.neo4j_password, self.langfuse_secret_key or ""]):
+            if any(
+                v in {"indus", "indus-secret", "indus-dev-secret-change-in-prod"}
+                for v in [self.neo4j_password, self.langfuse_secret_key or ""]
+            ):
                 raise ValueError("default development secrets are forbidden in staging/production")
         if self.indus_llm_checkpoint is not None and not Path(self.indus_llm_checkpoint).is_file():
             raise ValueError("INDUS_LLM_CHECKPOINT must point to an existing file")

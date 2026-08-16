@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 import logging
-import time
 
 from ik_memory.embeddings import embed_text
-from ik_retrieval.chunking import FixedSizeChunker, SentenceChunker
+
+from ik_retrieval.chunking import SentenceChunker
 from ik_retrieval.strategies.bm25_strategy import BM25Strategy
 from ik_retrieval.strategies.colbert import ColBERTReranker
 from ik_retrieval.strategies.crag import CorrectiveRAG
@@ -90,8 +90,14 @@ class RetrievalEngine:
                 (RetrievalStrategy.BM25, "Okapi BM25 — lexical retrieval, no embeddings."),
                 (RetrievalStrategy.SELF_RAG, "Self-RAG — LLM judges chunk relevance, filters."),
                 (RetrievalStrategy.CRAG, "Corrective RAG — grade, optionally web-fallback."),
-                (RetrievalStrategy.GRAPH_RAG, "GraphRAG — entity-graph expansion (Microsoft 2024)."),
-                (RetrievalStrategy.RAPTOR, "RAPTOR — hierarchical summary tree, multi-level retrieval."),
+                (
+                    RetrievalStrategy.GRAPH_RAG,
+                    "GraphRAG — entity-graph expansion (Microsoft 2024).",
+                ),
+                (
+                    RetrievalStrategy.RAPTOR,
+                    "RAPTOR — hierarchical summary tree, multi-level retrieval.",
+                ),
                 (RetrievalStrategy.HYDE, "HyDE — LLM-generated hypothesis → embed → retrieve."),
                 (RetrievalStrategy.COLBERT, "ColBERT — BM25 candidates + late-interaction rerank."),
             ]

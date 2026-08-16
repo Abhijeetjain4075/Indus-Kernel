@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import time
 
-from ik_memory.embeddings import embed_text
 from ik_retrieval.strategies.naive_rag import NaiveRAG
 from ik_retrieval.types import (
     RetrievalQuery,
@@ -21,7 +20,6 @@ from ik_retrieval.types import (
 )
 from ik_router.router import get_router
 from ik_router.types import LLMRequest, Message, MessageRole
-
 
 _HYDE_PROMPT = """Write a short, factual passage (2-3 sentences) that would directly answer the question below. Do not say you don't know — write the passage as if you were a domain expert providing a textbook excerpt.
 
@@ -62,10 +60,13 @@ class HyDE:
         # 1. Hypothesize
         try:
             hypothesis = await self._hypothesize(query.query)
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             # Without an LLM we cannot do HyDE properly. Fail loud.
             return RetrievalResult(
-                query=query, chunks=[], took_ms=0, strategy=RetrievalStrategy.HYDE,
+                query=query,
+                chunks=[],
+                took_ms=0,
+                strategy=RetrievalStrategy.HYDE,
                 rationale=f"HyDE requires an LLM; failed: {e}",
             )
         # 2. Use the hypothesis as the effective query for naive RAG

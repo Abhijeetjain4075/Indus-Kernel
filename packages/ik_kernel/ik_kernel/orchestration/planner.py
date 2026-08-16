@@ -24,7 +24,6 @@ from __future__ import annotations
 
 import logging
 import uuid
-from typing import Any
 
 from ik_kernel.orchestration.types import Plan, PlanStep, TaskSpec
 
@@ -105,15 +104,17 @@ class Planner:
         """
         new_steps = []
         for s in previous_plan.steps:
-            new_steps.append(PlanStep(
-                id=s.id,
-                title=s.title,
-                capability=s.capability,
-                args={**s.args, "_replanned_for": reason},
-                depends_on=s.depends_on,
-                timeout_s=s.timeout_s,
-                max_retries=s.max_retries,
-            ))
+            new_steps.append(
+                PlanStep(
+                    id=s.id,
+                    title=s.title,
+                    capability=s.capability,
+                    args={**s.args, "_replanned_for": reason},
+                    depends_on=s.depends_on,
+                    timeout_s=s.timeout_s,
+                    max_retries=s.max_retries,
+                )
+            )
         new_plan = Plan(
             id=f"plan_{uuid.uuid4()}",
             task_id=task.id,

@@ -18,12 +18,12 @@ import re
 import time
 from collections import Counter
 
-from ik_memory.embeddings import cosine_similarity, cosine_similarity_batch
+from ik_memory.embeddings import cosine_similarity
 from ik_memory.long_term import get_long_term_memory
 from ik_memory.types import (
     Memory,
-    MemoryQuery,
     MemoryLayer,
+    MemoryQuery,
     RetrievalSignal,
     ScoredMemory,
 )
@@ -169,6 +169,7 @@ class MultiSignalRetriever:
                 try:
                     # Compute query embedding on demand (cached by sentence-transformers)
                     from ik_memory.embeddings import embed_text
+
                     q_emb = embed_text(query.query)
                     signal_scores["semantic"] = max(0.0, cosine_similarity(q_emb, mem.embedding))
                 except RuntimeError:
@@ -213,9 +214,7 @@ class MultiSignalRetriever:
         scored.sort(key=lambda s: s.score, reverse=True)
         return scored[: query.top_k]
 
-    def _graph_distance_score(
-        self, user_id: str, seed_ids: list[str], target_id: str
-    ) -> float:
+    def _graph_distance_score(self, user_id: str, seed_ids: list[str], target_id: str) -> float:
         """Real graph distance via BFS over the in-memory graph.
 
         1 hop = 1.0, 2 hops = 0.5, 3 hops = 0.25, else 0.0.

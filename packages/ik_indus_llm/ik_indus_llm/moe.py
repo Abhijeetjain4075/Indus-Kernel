@@ -17,8 +17,6 @@ We implement:
 """
 
 from __future__ import annotations
-from dataclasses import dataclass
-from typing import Tuple
 
 import torch
 import torch.nn as nn
@@ -29,6 +27,7 @@ from .config import IndusConfig
 
 class Expert(nn.Module):
     """A single expert FFN — same shape as the SwiGLU FFN."""
+
     def __init__(self, cfg: IndusConfig, hidden_dim: int):
         super().__init__()
         self.gate = nn.Linear(cfg.n_embd, hidden_dim, bias=cfg.bias)
@@ -45,6 +44,7 @@ class MoE(nn.Module):
     Each token x_t is sent to the top-k experts as ranked by a learned
     router. Outputs are combined with the routing weights.
     """
+
     def __init__(self, cfg: IndusConfig):
         super().__init__()
         assert cfg.ffn_kind == "moe", "MoE used but ffn_kind is not 'moe'"
@@ -61,11 +61,9 @@ class MoE(nn.Module):
         # Router: a single linear layer mapping n_embd -> num_experts
         self.gate = nn.Linear(cfg.n_embd, cfg.moe_num_experts, bias=False)
         # The experts
-        self.experts = nn.ModuleList(
-            [Expert(cfg, hidden) for _ in range(cfg.moe_num_experts)]
-        )
+        self.experts = nn.ModuleList([Expert(cfg, hidden) for _ in range(cfg.moe_num_experts)])
 
-    def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         """x: [B, T, n_embd] -> (y: same shape, aux_loss: scalar)"""
         B, T, C = x.shape
         N = B * T  # total tokens
@@ -95,7 +93,7 @@ class MoE(nn.Module):
             # Which tokens go to this expert?
             # topk_idx shape [N, k] — for each token, the k expert indices
             # We want all (token, slot) pairs where slot points to expert ei
-            mask = (topk_idx == ei)  # [N, k] bool
+            mask = topk_idx == ei  # [N, k] bool
             if not mask.any():
                 continue
             # Gather the routing weights for those pairs
@@ -126,6 +124,7 @@ class DenseFFN(nn.Module):
 
     Reference: Shazeer, 2020 — https://arxiv.org/abs/2002.05202
     """
+
     def __init__(self, cfg: IndusConfig):
         super().__init__()
         hidden = int(cfg.ffn_mult * cfg.n_embd * 2 / 3)
@@ -135,6 +134,6 @@ class DenseFFN(nn.Module):
         self.down = nn.Linear(hidden, cfg.n_embd, bias=cfg.bias)
         self.dropout = nn.Dropout(cfg.dropout)
 
-    def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         y = self.down(F.silu(self.gate(x)) * self.up(x))
         return self.dropout(y), torch.tensor(0.0, device=x.device, dtype=x.dtype)

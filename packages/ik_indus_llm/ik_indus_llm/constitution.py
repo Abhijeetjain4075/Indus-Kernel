@@ -14,13 +14,12 @@ generated (response, critique, revision) triples become SFT data.
 """
 
 from __future__ import annotations
+
 from dataclasses import dataclass, field
-from typing import List, Optional
 
 import torch
 
 from .model import Indus
-
 
 # ---------------------------------------------------------------------------
 # The constitution
@@ -48,8 +47,8 @@ class Critique:
 @dataclass
 class CAResult:
     response: str
-    critiques: List[Critique] = field(default_factory=list)
-    revised: Optional[str] = None
+    critiques: list[Critique] = field(default_factory=list)
+    revised: str | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -91,22 +90,22 @@ def critique_and_revise(
     model: Indus,
     tokenizer,
     response: str,
-    constitution: Optional[List[str]] = None,
-    device: Optional[str] = None,
+    constitution: list[str] | None = None,
+    device: str | None = None,
     max_new_tokens: int = 200,
 ) -> CAResult:
     """Run critique-and-revise on a model response."""
     device = device or next(model.parameters()).device
     constitution = constitution or DEFAULT_CONSTITUTION
 
-    critiques: List[Critique] = []
+    critiques: list[Critique] = []
     violations = []
 
     for principle in constitution:
         prompt = CRITIQUE_PROMPT.format(principle=principle, response=response)
         idx = torch.tensor([tokenizer.encode(prompt)], dtype=torch.long, device=device)
         out = model.generate(idx, max_new_tokens=max_new_tokens, temperature=0.4, top_k=20)
-        new_ids = out[0].tolist()[idx.size(1):]
+        new_ids = out[0].tolist()[idx.size(1) :]
         text = tokenizer.decode(new_ids)
         violates = text.strip().lower().startswith("yes")
         critiques.append(Critique(principle=principle, critique=text.strip(), violates=violates))
@@ -121,6 +120,6 @@ def critique_and_revise(
     revise_prompt = REVISE_PROMPT.format(response=response, feedback=feedback)
     idx = torch.tensor([tokenizer.encode(revise_prompt)], dtype=torch.long, device=device)
     out = model.generate(idx, max_new_tokens=max_new_tokens, temperature=0.4, top_k=20)
-    new_ids = out[0].tolist()[idx.size(1):]
+    new_ids = out[0].tolist()[idx.size(1) :]
     revised = tokenizer.decode(new_ids).strip()
     return CAResult(response=response, critiques=critiques, revised=revised)

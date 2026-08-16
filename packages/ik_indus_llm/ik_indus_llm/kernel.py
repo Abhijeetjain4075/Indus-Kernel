@@ -19,25 +19,25 @@ a vector DB, but the API stays the same.
 """
 
 from __future__ import annotations
+
+import builtins
 import json
 import math
 import shutil
 import time
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Optional, List, Dict, Any
+from typing import Any
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
 from .model import Indus
-from .config import IndusConfig
-
 
 # ---------------------------------------------------------------------------
 # LoRA — Low-Rank Adaptation of linear layers
 # ---------------------------------------------------------------------------
+
 
 class LoRALinear(nn.Module):
     """A linear layer with a low-rank adapter trained on top of frozen weights.
@@ -45,8 +45,8 @@ class LoRALinear(nn.Module):
     W' = W + (alpha/r) * B @ A
     where A is [r, in] and B is [out, r], both initialized so BA = 0.
     """
-    def __init__(self, base: nn.Linear, r: int = 8, alpha: float = 16.0,
-                 dropout: float = 0.0):
+
+    def __init__(self, base: nn.Linear, r: int = 8, alpha: float = 16.0, dropout: float = 0.0):
         super().__init__()
         self.base = base
         # Freeze base weights
@@ -90,8 +90,7 @@ def merge_lora(model: Indus) -> int:
     return merged
 
 
-def inject_lora(model: Indus, r: int = 8, alpha: float = 16.0,
-                target: str = "qkv") -> int:
+def inject_lora(model: Indus, r: int = 8, alpha: float = 16.0, target: str = "qkv") -> int:
     """Wrap target linear layers with LoRA adapters. Returns # adapters added.
 
     target: "qkv" wraps Q/K/V/O projections. "all" wraps all linears.
@@ -100,9 +99,9 @@ def inject_lora(model: Indus, r: int = 8, alpha: float = 16.0,
     for name, module in model.named_modules():
         if isinstance(module, nn.Linear) and not isinstance(module, LoRALinear):
             is_target = False
-            if target == "qkv" and any(k in name for k in ["q_proj", "k_proj", "v_proj", "o_proj"]):
-                is_target = True
-            elif target == "all":
+            if (
+                target == "qkv" and any(k in name for k in ["q_proj", "k_proj", "v_proj", "o_proj"])
+            ) or target == "all":
                 is_target = True
             if is_target:
                 parent_name, _, child_name = name.rpartition(".")
@@ -113,24 +112,25 @@ def inject_lora(model: Indus, r: int = 8, alpha: float = 16.0,
     return n
 
 
-def lora_parameters(model: Indus) -> List[nn.Parameter]:
-    return [p for n, p in model.named_parameters()
-            if "lora_" in n and p.requires_grad]
+def lora_parameters(model: Indus) -> list[nn.Parameter]:
+    return [p for n, p in model.named_parameters() if "lora_" in n and p.requires_grad]
 
 
 # ---------------------------------------------------------------------------
 # Data versioning
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class DatasetVersion:
     """A versioned dataset snapshot."""
+
     name: str
     version: str
     path: str
     num_examples: int
     created_at: float
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 class DataStore:
@@ -139,11 +139,12 @@ class DataStore:
     Each "dataset" is a folder of .jsonl files plus a manifest. New
     versions are immutable; you add a new version, never mutate old ones.
     """
+
     def __init__(self, root: str = "data_store"):
         self.root = Path(root)
         self.root.mkdir(parents=True, exist_ok=True)
         self.manifest_path = self.root / "manifest.jsonl"
-        self.versions: Dict[str, List[DatasetVersion]] = {}
+        self.versions: dict[str, list[DatasetVersion]] = {}
         self._load_manifest()
 
     def _load_manifest(self):
@@ -158,8 +159,9 @@ class DataStore:
         with self.manifest_path.open("a") as f:
             f.write(json.dumps(asdict(v)) + "\n")
 
-    def add_version(self, name: str, src_path: str,
-                    metadata: Optional[Dict[str, Any]] = None) -> DatasetVersion:
+    def add_version(
+        self, name: str, src_path: str, metadata: dict[str, Any] | None = None
+    ) -> DatasetVersion:
         """Snapshot a dataset file into the store."""
         existing = self.versions.get(name, [])
         version = f"v{len(existing) + 1}"
@@ -167,7 +169,9 @@ class DataStore:
         dest.mkdir(parents=True, exist_ok=True)
         shutil.copy2(src_path, dest / Path(src_path).name)
         v = DatasetVersion(
-            name=name, version=version, path=str(dest),
+            name=name,
+            version=version,
+            path=str(dest),
             num_examples=sum(1 for _ in open(src_path)),
             created_at=time.time(),
             metadata=metadata or {},
@@ -176,11 +180,11 @@ class DataStore:
         self._append_manifest(v)
         return v
 
-    def latest(self, name: str) -> Optional[DatasetVersion]:
+    def latest(self, name: str) -> DatasetVersion | None:
         versions = self.versions.get(name, [])
         return versions[-1] if versions else None
 
-    def list(self, name: Optional[str] = None) -> List[DatasetVersion]:
+    def list(self, name: str | None = None) -> builtins.list[DatasetVersion]:
         if name:
             return list(self.versions.get(name, []))
         return [v for vs in self.versions.values() for v in vs]
@@ -190,12 +194,14 @@ class DataStore:
 # Evaluation harness
 # ---------------------------------------------------------------------------
 
+
 class Evaluator:
     """Lightweight eval harness: perplexity, accuracy, generation quality.
 
     For real benchmarks, swap in lm-evaluation-harness. This is the
     minimal version that fits the Kernel API.
     """
+
     def __init__(self, model: Indus, device: str = "cpu"):
         self.model = model
         self.device = device
@@ -210,7 +216,7 @@ class Evaluator:
         chunk = self.model.cfg.block_size
         nlls = []
         for i in range(0, len(ids) - 1, chunk):
-            sub = ids[i:i + chunk + 1]
+            sub = ids[i : i + chunk + 1]
             x = torch.tensor([sub[:-1]], dtype=torch.long, device=self.device)
             y = torch.tensor([sub[1:]], dtype=torch.long, device=self.device)
             out = self.model(x, y)
@@ -233,6 +239,7 @@ class Evaluator:
 # Indus Kernel — the top-level continuous-learning orchestrator
 # ---------------------------------------------------------------------------
 
+
 class IndusKernel:
     """The continuous-learning layer that sits above the model.
 
@@ -243,15 +250,15 @@ class IndusKernel:
         kernel.evaluate(...)
         if kernel.is_better(): kernel.promote(adapter)
     """
+
     def __init__(self, model: Indus, store_root: str = "data_store"):
         self.model = model
         self.store = DataStore(store_root)
-        self.adapters: Dict[str, Dict[str, Any]] = {}
-        self.active_adapter: Optional[str] = None
-        self.history: List[Dict[str, Any]] = []
+        self.adapters: dict[str, dict[str, Any]] = {}
+        self.active_adapter: str | None = None
+        self.history: list[dict[str, Any]] = []
 
-    def add_adapter(self, name: str, r: int = 8, alpha: float = 16.0,
-                    target: str = "qkv") -> int:
+    def add_adapter(self, name: str, r: int = 8, alpha: float = 16.0, target: str = "qkv") -> int:
         """Inject a fresh LoRA adapter and freeze the base model."""
         if name in self.adapters:
             raise ValueError(f"adapter {name!r} already exists")
@@ -265,13 +272,14 @@ class IndusKernel:
     def train_adapter(
         self,
         adapter_name: str,
-        pairs: List[tuple],
+        pairs: list[tuple],
         iters: int = 200,
         lr: float = 1e-4,
-        tokenizer_name: Optional[str] = None,
+        tokenizer_name: str | None = None,
     ) -> dict:
         """Quick LoRA fine-tune on (prompt, response) pairs."""
-        from .train import sft, TrainConfig
+        from .train import TrainConfig, sft
+
         # Save current weights, train only LoRA params, restore.
         cfg = TrainConfig(
             out_dir=f"checkpoints/adapter_{adapter_name}",
@@ -289,9 +297,12 @@ class IndusKernel:
         if tokenizer_name is None:
             tokenizer_name = "char" if self.model.cfg.vocab_size <= 256 else "gpt2"
         if self.model.cfg.vocab_size != 65 and tokenizer_name == "char":
-            raise ValueError("char tokenizer is only supported when model vocab_size matches its saved char vocabulary")
+            raise ValueError(
+                "char tokenizer is only supported when model vocab_size matches its saved char vocabulary"
+            )
         if tokenizer_name != "char":
             from .tokenizer import IndusTokenizer
+
             tok = IndusTokenizer(tokenizer_name)
             if tok.vocab_size != self.model.cfg.vocab_size:
                 raise ValueError(
@@ -317,8 +328,10 @@ class IndusKernel:
         }
         Path(dest).parent.mkdir(parents=True, exist_ok=True)
         torch.save(payload, dest)
-        self.record({"event": "promote", "adapter": adapter_name, "merged_layers": merged, "dest": dest})
+        self.record(
+            {"event": "promote", "adapter": adapter_name, "merged_layers": merged, "dest": dest}
+        )
         return dest
 
-    def record(self, event: Dict[str, Any]):
+    def record(self, event: dict[str, Any]):
         self.history.append({"ts": time.time(), **event})

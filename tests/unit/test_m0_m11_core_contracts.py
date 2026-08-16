@@ -36,9 +36,9 @@ def test_workflow_automation_eval():
 
 def test_protocols_and_optimization():
  m=AgentMessage("a","b","test",{"x":1}); validate_message(m); assert to_a2a_task(m)["id"]; assert to_mcp_call("tool",{})["method"]=="tools/call"
- r=optimize("base",lambda p:len(p),2); assert r.score>=len("base")
- assert select_best([Candidate("a",1),Candidate("b",2)]).answer=="b"
- assert majority_vote([Candidate("a",1),Candidate("a",.5),Candidate("b",10)]).answer=="a"
+ r=optimize("base",lambda p:len(p),2); assert r.best_score>=len("base")
+ assert select_best([Candidate("a",1),Candidate("b",2)]).response=="b"
+ assert majority_vote([Candidate("a",1),Candidate("a",.5),Candidate("b",10)]).response=="a"
 
 def test_distillation_state():
  r=build_record("p","t","y"); assert '"prompt": "p"' in to_jsonl([r]); s=StateStore(); s.set("x",1); assert s.snapshot()=={"x":1}; s.delete("x"); assert s.get("x") is None

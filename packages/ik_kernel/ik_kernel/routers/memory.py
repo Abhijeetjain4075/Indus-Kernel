@@ -12,14 +12,11 @@ POST   /api/v1/memory/forget              — trigger forgetting
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, Field
-
 from ik_memory.engine import get_engine
-from ik_kernel.deps import Principal, get_current_principal
 from ik_memory.long_term import get_long_term_memory
 from ik_memory.types import (
     MemoryAdd,
@@ -28,8 +25,9 @@ from ik_memory.types import (
     MemoryType,
     RetrievalSignal,
 )
-from ik_memory.working import get_working_memory
-from ik_memory.short_term import get_short_term_memory
+from pydantic import BaseModel, Field
+
+from ik_kernel.deps import Principal, get_current_principal
 
 router = APIRouter()
 
@@ -39,7 +37,9 @@ def _authorize_user(user_id: str, principal: Principal) -> None:
     if "admin" in principal.roles or "memory:admin" in principal.scopes or "*" in principal.scopes:
         return
     if principal.user_id is None:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="memory_user_identity_required")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="memory_user_identity_required"
+        )
     if user_id != principal.user_id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="memory_not_found")
 
@@ -127,7 +127,9 @@ class MemoryStats(BaseModel):
 # Endpoints
 # ============================================================================
 @router.get("/objects", summary="List memory objects for a user")
-async def list_memory_objects(user_id: str, principal: Principal = Depends(get_current_principal)) -> dict[str, Any]:
+async def list_memory_objects(
+    user_id: str, principal: Principal = Depends(get_current_principal)
+) -> dict[str, Any]:
     """List all long-term memories for a user."""
     _authorize_user(user_id, principal)
     store = get_long_term_memory()
@@ -153,7 +155,9 @@ async def list_memory_objects(user_id: str, principal: Principal = Depends(get_c
 
 
 @router.post("/objects", status_code=201, summary="Write a memory (Mem0 v2 pipeline)")
-async def write_memory_object(obj: MemoryObjectIn, principal: Principal = Depends(get_current_principal)) -> dict[str, Any]:
+async def write_memory_object(
+    obj: MemoryObjectIn, principal: Principal = Depends(get_current_principal)
+) -> dict[str, Any]:
     """Write a memory using the Mem0 v2 algorithm.
 
     Requires sentence-transformers to be installed (for real embeddings).
@@ -188,42 +192,44 @@ async def write_memory_object(obj: MemoryObjectIn, principal: Principal = Depend
                 for m in results
             ],
         }
-    else:
-        from ik_memory.types import Memory
-        m = Memory(
-            user_id=obj.user_id,
-            session_id=obj.session_id,
-            agent_id=obj.agent_id,
-            layer=obj.layer,
-            type=obj.type,
-            content=obj.content,
-            importance=obj.importance,
-            tags=obj.tags,
-            metadata=obj.metadata,
-        )
-        saved = await engine.add(m)
-        return {
-            "stored": True,
-            "count": 1,
-            "memories": [
-                MemoryObjectOut(
-                    id=saved.id,
-                    user_id=saved.user_id,
-                    content=saved.content,
-                    type=saved.type.value,
-                    layer=saved.layer.value,
-                    importance=saved.importance,
-                    tags=saved.tags,
-                    metadata=saved.metadata,
-                    created_at=saved.created_at.isoformat(),
-                    updated_at=saved.updated_at.isoformat(),
-                ).model_dump()
-            ],
-        }
+    from ik_memory.types import Memory
+
+    m = Memory(
+        user_id=obj.user_id,
+        session_id=obj.session_id,
+        agent_id=obj.agent_id,
+        layer=obj.layer,
+        type=obj.type,
+        content=obj.content,
+        importance=obj.importance,
+        tags=obj.tags,
+        metadata=obj.metadata,
+    )
+    saved = await engine.add(m)
+    return {
+        "stored": True,
+        "count": 1,
+        "memories": [
+            MemoryObjectOut(
+                id=saved.id,
+                user_id=saved.user_id,
+                content=saved.content,
+                type=saved.type.value,
+                layer=saved.layer.value,
+                importance=saved.importance,
+                tags=saved.tags,
+                metadata=saved.metadata,
+                created_at=saved.created_at.isoformat(),
+                updated_at=saved.updated_at.isoformat(),
+            ).model_dump()
+        ],
+    }
 
 
 @router.get("/objects/{obj_id}", summary="Read a memory")
-async def read_memory_object(obj_id: str, user_id: str, principal: Principal = Depends(get_current_principal)) -> dict[str, Any]:
+async def read_memory_object(
+    obj_id: str, user_id: str, principal: Principal = Depends(get_current_principal)
+) -> dict[str, Any]:
     """Read a memory by id."""
     _authorize_user(user_id, principal)
     store = get_long_term_memory()
@@ -245,7 +251,12 @@ async def read_memory_object(obj_id: str, user_id: str, principal: Principal = D
 
 
 @router.patch("/objects/{obj_id}", summary="Update a memory")
-async def update_memory_object(obj_id: str, user_id: str, patch: MemoryObjectPatch, principal: Principal = Depends(get_current_principal)) -> dict[str, Any]:
+async def update_memory_object(
+    obj_id: str,
+    user_id: str,
+    patch: MemoryObjectPatch,
+    principal: Principal = Depends(get_current_principal),
+) -> dict[str, Any]:
     """Update a memory in place."""
     _authorize_user(user_id, principal)
     store = get_long_term_memory()
@@ -253,6 +264,7 @@ async def update_memory_object(obj_id: str, user_id: str, patch: MemoryObjectPat
     if "content" in updates:
         # Re-embed the new content
         from ik_memory.embeddings import embed_text
+
         try:
             updates["embedding"] = embed_text(updates["content"])
         except RuntimeError as e:
@@ -264,7 +276,9 @@ async def update_memory_object(obj_id: str, user_id: str, patch: MemoryObjectPat
 
 
 @router.delete("/objects/{obj_id}", summary="Delete a memory")
-async def delete_memory_object(obj_id: str, user_id: str, principal: Principal = Depends(get_current_principal)) -> dict[str, Any]:
+async def delete_memory_object(
+    obj_id: str, user_id: str, principal: Principal = Depends(get_current_principal)
+) -> dict[str, Any]:
     """Delete a memory by id."""
     _authorize_user(user_id, principal)
     store = get_long_term_memory()
@@ -275,7 +289,9 @@ async def delete_memory_object(obj_id: str, user_id: str, principal: Principal =
 
 
 @router.post("/query", response_model=MemoryQueryResponse, summary="Multi-signal search")
-async def query_memory(req: MemoryQueryRequest, principal: Principal = Depends(get_current_principal)) -> MemoryQueryResponse:
+async def query_memory(
+    req: MemoryQueryRequest, principal: Principal = Depends(get_current_principal)
+) -> MemoryQueryResponse:
     """Search memory using the multi-signal retriever.
 
     Real BM25, real cosine similarity over real embeddings, real recency decay.
@@ -315,7 +331,9 @@ async def query_memory(req: MemoryQueryRequest, principal: Principal = Depends(g
 
 
 @router.post("/reflect", summary="Trigger memory reflection")
-async def reflect_memory(user_id: str, principal: Principal = Depends(get_current_principal)) -> dict[str, Any]:
+async def reflect_memory(
+    user_id: str, principal: Principal = Depends(get_current_principal)
+) -> dict[str, Any]:
     _authorize_user(user_id, principal)
     """Trigger a reflection pass.
 
@@ -329,8 +347,9 @@ async def reflect_memory(user_id: str, principal: Principal = Depends(get_curren
     for m in mems:
         # Deterministic: bump importance of recently-accessed memories
         if m.last_accessed_at is not None:
-            from datetime import datetime, timezone
-            age = (datetime.now(timezone.utc) - m.last_accessed_at).total_seconds()
+            from datetime import datetime
+
+            age = (datetime.now(UTC) - m.last_accessed_at).total_seconds()
             if age < 86400:  # accessed in last day
                 m.importance = min(1.0, m.importance + 0.05)
                 reflected += 1
@@ -338,12 +357,18 @@ async def reflect_memory(user_id: str, principal: Principal = Depends(get_curren
 
 
 @router.post("/forget", summary="Trigger memory forgetting")
-async def forget_memory(user_id: str, older_than_days: int = 30, min_importance: float = 0.1, principal: Principal = Depends(get_current_principal)) -> dict[str, Any]:
+async def forget_memory(
+    user_id: str,
+    older_than_days: int = 30,
+    min_importance: float = 0.1,
+    principal: Principal = Depends(get_current_principal),
+) -> dict[str, Any]:
     _authorize_user(user_id, principal)
     """Forget low-importance, old memories (real TTL-based eviction)."""
     store = get_long_term_memory()
-    from datetime import datetime, timezone, timedelta
-    cutoff = datetime.now(timezone.utc) - timedelta(days=older_than_days)
+    from datetime import timedelta
+
+    cutoff = datetime.now(UTC) - timedelta(days=older_than_days)
     forgotten = 0
     for m in list(store.list_user(user_id)):
         if m.updated_at < cutoff and m.importance < min_importance:
@@ -355,7 +380,12 @@ async def forget_memory(user_id: str, older_than_days: int = 30, min_importance:
 @router.get("/stats", response_model=MemoryStats, summary="Memory engine stats")
 async def memory_stats(principal: Principal = Depends(get_current_principal)) -> MemoryStats:
     """Return tenant-scoped statistics; global statistics are admin-only."""
-    if "admin" not in principal.roles and "memory:admin" not in principal.scopes and "*" not in principal.scopes and principal.user_id is None:
+    if (
+        "admin" not in principal.roles
+        and "memory:admin" not in principal.scopes
+        and "*" not in principal.scopes
+        and principal.user_id is None
+    ):
         raise HTTPException(status_code=403, detail="memory_user_identity_required")
     engine = get_engine()
     s = engine.stats()

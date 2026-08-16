@@ -5,8 +5,8 @@ Usage:
 """
 
 import sys
-from .data import prepare_text_bin
 
+from .data import prepare_text_bin
 
 if __name__ == "__main__":
     if len(sys.argv) != 3:

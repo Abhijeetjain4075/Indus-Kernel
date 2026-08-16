@@ -14,7 +14,6 @@ import time
 from ik_memory.embeddings import (
     cosine_similarity_batch,
     embed_text,
-    is_available as embeddings_available,
 )
 from ik_retrieval.strategies.base import BaseRetrievalStrategy
 from ik_retrieval.types import (
@@ -43,7 +42,10 @@ class NaiveRAG(BaseRetrievalStrategy):
         emb_chunks = [c for c in chunks if c.embedding is not None]
         if not emb_chunks:
             return RetrievalResult(
-                query=query, chunks=[], took_ms=0, strategy=RetrievalStrategy.NAIVE_RAG,
+                query=query,
+                chunks=[],
+                took_ms=0,
+                strategy=RetrievalStrategy.NAIVE_RAG,
                 rationale="no chunks with embeddings; pass --embed-chunks at index time",
             )
 
@@ -52,7 +54,10 @@ class NaiveRAG(BaseRetrievalStrategy):
             q_emb = embed_text(query.query)
         except RuntimeError as e:
             return RetrievalResult(
-                query=query, chunks=[], took_ms=0, strategy=RetrievalStrategy.NAIVE_RAG,
+                query=query,
+                chunks=[],
+                took_ms=0,
+                strategy=RetrievalStrategy.NAIVE_RAG,
                 rationale=f"embedding model not available: {e}",
             )
 

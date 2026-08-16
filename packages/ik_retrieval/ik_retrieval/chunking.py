@@ -10,7 +10,6 @@ from __future__ import annotations
 import re
 import uuid
 from abc import ABC, abstractmethod
-from typing import Iterable
 
 from ik_retrieval.types import Chunk, Document
 
@@ -37,6 +36,7 @@ class FixedSizeChunker(Chunker):
     def _count_tokens(self, text: str) -> int:
         try:
             import tiktoken
+
             enc = tiktoken.get_encoding("cl100k_base")
             return len(enc.encode(text))
         except ImportError:
@@ -46,6 +46,7 @@ class FixedSizeChunker(Chunker):
         encoding: list[str] | None = None
         try:
             import tiktoken
+
             encoding = tiktoken.get_encoding("cl100k_base").encode(doc.content)
         except ImportError:
             # Fallback: word-based pseudo-tokens
@@ -64,6 +65,7 @@ class FixedSizeChunker(Chunker):
                 text = " ".join(piece)
             else:
                 import tiktoken
+
                 text = tiktoken.get_encoding("cl100k_base").decode(piece)
             chunks.append(
                 Chunk(
@@ -114,7 +116,11 @@ class SentenceChunker(Chunker):
                         document_id=doc.id,
                         content=" ".join(buf),
                         position=i,
-                        metadata={"strategy": "sentence", "size_tokens": buf_len, "n_sentences": len(buf)},
+                        metadata={
+                            "strategy": "sentence",
+                            "size_tokens": buf_len,
+                            "n_sentences": len(buf),
+                        },
                     )
                 )
                 i += 1
@@ -129,7 +135,11 @@ class SentenceChunker(Chunker):
                     document_id=doc.id,
                     content=" ".join(buf),
                     position=i,
-                    metadata={"strategy": "sentence", "size_tokens": buf_len, "n_sentences": len(buf)},
+                    metadata={
+                        "strategy": "sentence",
+                        "size_tokens": buf_len,
+                        "n_sentences": len(buf),
+                    },
                 )
             )
         return chunks

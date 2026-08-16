@@ -18,27 +18,24 @@ import logging
 import time
 import uuid
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import TypedDict
-
-from langgraph.checkpoint.memory import MemorySaver
-from langgraph.graph import END, START, StateGraph
 
 from ik_memory.engine import get_engine
 from ik_memory.types import (
     MemoryAdd,
-    MemoryLayer,
     MemoryQuery,
     MemoryType,
     RetrievalSignal,
 )
+from ik_router.router import get_router
 from ik_router.types import (
     LLMRequest,
     Message,
     MessageRole,
-    ResponseFormat,
 )
-from ik_router.router import get_router
+from langgraph.checkpoint.memory import MemorySaver
+from langgraph.graph import END, START, StateGraph
 
 logger = logging.getLogger(__name__)
 
@@ -94,7 +91,7 @@ async def perceive(state: HelloState) -> HelloState:
         "goal": goal,
         "user_id": user_id,
         "session_id": session_id,
-        "started_at": datetime.now(timezone.utc).isoformat(),
+        "started_at": datetime.now(UTC).isoformat(),
     }
 
     # Real memory retrieval (skips silently if no embeddings model)
@@ -106,7 +103,11 @@ async def perceive(state: HelloState) -> HelloState:
                 query=goal,
                 session_id=session_id,
                 top_k=5,
-                signals=[RetrievalSignal.SEMANTIC, RetrievalSignal.RECENCY, RetrievalSignal.IMPORTANCE],
+                signals=[
+                    RetrievalSignal.SEMANTIC,
+                    RetrievalSignal.RECENCY,
+                    RetrievalSignal.IMPORTANCE,
+                ],
             )
         )
         perception["retrieved_memories"] = [
@@ -134,21 +135,19 @@ async def reason(state: HelloState) -> HelloState:
     """
     router = get_router()
     goal = state.get("goal", "")
-    retrieved = state.get("perception", {}).get("retrieved_memories", []) if isinstance(state.get("perception"), dict) else []
-    context = "\n".join(
-        f"- {m['content']}" for m in retrieved
-    ) or "(no prior memories)"
+    retrieved = (
+        state.get("perception", {}).get("retrieved_memories", [])
+        if isinstance(state.get("perception"), dict)
+        else []
+    )
+    context = "\n".join(f"- {m['content']}" for m in retrieved) or "(no prior memories)"
 
     system = (
         "You are Indus Kernel, a cognitive operating system. "
         "You answer questions directly, factually, and concisely. "
         "If you do not know the answer, say so explicitly."
     )
-    user = (
-        f"User goal: {goal}\n\n"
-        f"Relevant prior memories:\n{context}\n\n"
-        f"Answer the goal."
-    )
+    user = f"User goal: {goal}\n\nRelevant prior memories:\n{context}\n\nAnswer the goal."
 
     response = await router.complete(
         LLMRequest(
@@ -212,7 +211,7 @@ async def reflect(state: HelloState) -> HelloState:
             "total_tokens": state.get("total_tokens", 0) + response.usage.total_tokens,
             "total_cost_cents": state.get("total_cost_cents", 0) + response.cost_cents,
         }
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         logger.warning("reflect: LLM call failed, skipping self-assessment: %s", e)
         return {"reflection": answer}
 
@@ -232,7 +231,7 @@ async def remember(state: HelloState) -> HelloState:
         "run_id": state.get("run_id", ""),
         "session_id": session_id,
         "started_at": state.get("started_at", ""),
-        "completed_at": datetime.now(timezone.utc).isoformat(),
+        "completed_at": datetime.now(UTC).isoformat(),
     }
 
     try:
@@ -252,7 +251,7 @@ async def remember(state: HelloState) -> HelloState:
     except RuntimeError as e:
         logger.info("remember: embeddings not available, skipping long-term store: %s", e)
         record["mem0_status"] = "skipped"
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         logger.warning("remember: mem0 add failed: %s", e)
         record["mem0_status"] = f"error: {e}"
 
@@ -271,10 +270,10 @@ async def remember(state: HelloState) -> HelloState:
             content=answer,
             user_id=user_id,
         )
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         logger.warning("remember: working memory add failed: %s", e)
 
-    record["completed_at"] = datetime.now(timezone.utc).isoformat()
+    record["completed_at"] = datetime.now(UTC).isoformat()
     return {"memory_record": record, "completed_at": record["completed_at"]}
 
 

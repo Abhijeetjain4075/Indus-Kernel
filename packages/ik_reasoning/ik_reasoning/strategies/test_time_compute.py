@@ -17,7 +17,6 @@ from ik_reasoning.types import ReasoningRequest, ReasoningResult, ReasoningStep,
 from ik_router.router import get_router
 from ik_router.types import LLMRequest, Message, MessageRole
 
-
 _VERIFIER_PROMPT = """Rate the correctness of this answer on a 1-10 scale. Reply with just the number.
 
 Question: {question}
@@ -41,7 +40,10 @@ class TestTimeCompute:
                 LLMRequest(
                     messages=[
                         Message(role=MessageRole.SYSTEM, content="You verify answers."),
-                        Message(role=MessageRole.USER, content=_VERIFIER_PROMPT.format(question=question, answer=answer)),
+                        Message(
+                            role=MessageRole.USER,
+                            content=_VERIFIER_PROMPT.format(question=question, answer=answer),
+                        ),
                     ],
                     capability_requirements=["text"],
                     temperature=0.0,
@@ -49,6 +51,7 @@ class TestTimeCompute:
                 )
             )
             import re
+
             m = re.search(r"\d+", resp.content)
             return min(10, max(1, int(m.group(0)))) / 10.0 if m else 0.5
         except Exception:
@@ -76,8 +79,21 @@ class TestTimeCompute:
         best_idx = max(range(len(candidates)), key=lambda i: verifs[i])
         best = candidates[best_idx]
         # All steps
-        steps: list[ReasoningStep] = [ReasoningStep(type="thought", content=f"cand {i}: {candidates[i].answer[:80]}", metadata={"score": verifs[i]}) for i in range(len(candidates))]
-        steps.append(ReasoningStep(type="final", content=best.answer, metadata={"n_candidates": len(candidates), "best_score": verifs[best_idx]}))
+        steps: list[ReasoningStep] = [
+            ReasoningStep(
+                type="thought",
+                content=f"cand {i}: {candidates[i].answer[:80]}",
+                metadata={"score": verifs[i]},
+            )
+            for i in range(len(candidates))
+        ]
+        steps.append(
+            ReasoningStep(
+                type="final",
+                content=best.answer,
+                metadata={"n_candidates": len(candidates), "best_score": verifs[best_idx]},
+            )
+        )
         return ReasoningResult(
             request=req,
             answer=best.answer,
