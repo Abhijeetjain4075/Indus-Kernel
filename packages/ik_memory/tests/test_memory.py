@@ -442,7 +442,7 @@ class TestMemoryEngine:
             pytest.skip("sentence-transformers not available")
         n = engine.clear("u1")
         assert n >= 1
-        assert engine.stats()["long_term"]["memories"] == 0
+        assert engine.stats(user_id="u1")["long_term"]["memories"] == 0
 
     def test_stats(self):
         engine = MemoryEngine()

@@ -106,8 +106,20 @@ class LongTermMemory:
                 if memory_id not in m.related_memory_ids:
                     m.related_memory_ids = [*m.related_memory_ids, memory_id]
 
-    def stats(self) -> dict[str, int]:
-        """Return store statistics."""
+    def stats(self, user_id: str | None = None) -> dict[str, int]:
+        """Return store statistics.
+
+        If user_id is provided, the count is scoped to that user. Other users'
+        memories are still summed in the totals (so global stats are correct),
+        but the 'memories' field is the user-scoped count when filtered.
+        """
+        if user_id is not None:
+            user_memory_ids = set(self._store.get(user_id, {}).keys())
+            return {
+                "users": 1 if user_id in self._store else 0,
+                "memories": len(user_memory_ids),
+                "embeddings": sum(1 for mid in self._vector_index if mid in user_memory_ids),
+            }
         return {
             "users": len(self._store),
             "memories": sum(len(s) for s in self._store.values()),

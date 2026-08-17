@@ -57,6 +57,12 @@ class ShortTermMemory:
         candidates.sort(key=lambda m: m.created_at, reverse=True)
         return candidates[:top_k]
 
+    def count(self, user_id: str | None = None) -> int:
+        """Count short-term memories (optionally scoped to a user)."""
+        if user_id is None:
+            return len(self._store)
+        return sum(1 for mem, _ in self._store.values() if mem.user_id == user_id)
+
     def clear_session(self, session_id: str) -> int:
         """Clear all memories for a session."""
         expired_ids = [mid for mid, (mem, _) in self._store.items() if mem.session_id == session_id]

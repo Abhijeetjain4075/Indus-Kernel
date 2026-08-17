@@ -180,12 +180,16 @@ class MemoryEngine:
             n += 1
         return n
 
-    def stats(self) -> dict[str, int | dict[str, int]]:
-        """Return engine statistics."""
+    def stats(self, user_id: str | None = None) -> dict[str, int | dict[str, int]]:
+        """Return engine statistics.
+
+        If user_id is provided, scopes the long-term and short-term counts
+        to that user. Working-memory session count is user-scoped when known.
+        """
         return {
-            "long_term": self.long.stats(),
-            "short_term_entries": len(self.short._store),
-            "working_sessions": len(self.working._buffers),
+            "long_term": self.long.stats(user_id=user_id),
+            "short_term_entries": self.short.count(user_id=user_id),
+            "working_sessions": self.working.count(user_id=user_id),
         }
 
 

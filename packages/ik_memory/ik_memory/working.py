@@ -43,6 +43,18 @@ class WorkingMemory:
         self._buffers[session_id].clear()
         return n
 
+    def count(self, user_id: str | None = None) -> int:
+        """Count working-memory sessions, optionally scoped to a user."""
+        if user_id is None:
+            return len(self._buffers)
+        n = 0
+        for buf in self._buffers.values():
+            for mem in buf:
+                if mem.user_id == user_id:
+                    n += 1
+                    break
+        return n
+
 
 _working: WorkingMemory | None = None
 
