@@ -26,7 +26,7 @@ def test_durable_local_runtime():
 
 def test_event_and_memory_persistence():
  bus=EventBus(); eid=asyncio.run(bus.publish(Event("x",{"a":1}))); assert list(bus.replay("x"))[0].id==eid; bus.close()
- mem=MemoryOS(); m=mem.add(MemoryObject("u","hello world")); assert mem.search("u","hello")[0].id==m.id; mem.close()
+ mem=MemoryOS(); m=mem.add("t","u","hello world"); assert mem.search("t","u","hello")[0].id==m.id
 
 def test_workflow_automation_eval():
  reg=WorkflowRegistry(); reg.register(Workflow("w","W",["a","b"]))
