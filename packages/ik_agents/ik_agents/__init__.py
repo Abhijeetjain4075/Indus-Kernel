@@ -19,9 +19,10 @@ from __future__ import annotations
 import asyncio
 import time
 import uuid
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Awaitable, Callable
+from typing import Any
 
 __version__ = "1.0.0"
 
@@ -85,6 +86,7 @@ class AgentOrchestrator:
 
     def __init__(self) -> None:
         import threading
+
         self._lock = threading.RLock()
         self._agents: dict[str, AgentSpec] = {}
         self._handlers: dict[str, Handler] = {}
@@ -146,11 +148,11 @@ class AgentOrchestrator:
         handler = self._handlers.get(agent.handler or agent.id)
         if handler is None:
             raise KeyError(f"no handler for agent: {agent.id}")
-        return await handler({"role": agent.role, "id": agent.id, "description": agent.description}, context)
+        return await handler(
+            {"role": agent.role, "id": agent.id, "description": agent.description}, context
+        )
 
-    async def _run_chain(
-        self, goal: str, context: dict[str, Any], run_id: str
-    ) -> dict[str, Any]:
+    async def _run_chain(self, goal: str, context: dict[str, Any], run_id: str) -> dict[str, Any]:
         agents = list(self._agents.values())
         current: dict[str, Any] = {"goal": goal, "context": context}
         steps: list[dict[str, Any]] = []
@@ -159,9 +161,7 @@ class AgentOrchestrator:
             steps.append({"agent": agent.id, "output": current})
         return {"final": current, "steps": steps}
 
-    async def _run_graph(
-        self, goal: str, context: dict[str, Any], run_id: str
-    ) -> dict[str, Any]:
+    async def _run_graph(self, goal: str, context: dict[str, Any], run_id: str) -> dict[str, Any]:
         # Topological execution with concurrency
         completed: set[str] = set()
         in_flight: dict[str, asyncio.Task] = {}
@@ -175,7 +175,8 @@ class AgentOrchestrator:
 
         while len(completed) < len(self._agents):
             ready = [
-                a for a in self._agents.values()
+                a
+                for a in self._agents.values()
                 if a.id not in completed
                 and a.id not in in_flight
                 and all(d in completed for d in self._graph_edges.get(a.id, []))
@@ -224,9 +225,7 @@ class AgentOrchestrator:
         winner, _ = counts.most_common(1)[0]
         return {"consensus": winner, "votes": dict(counts)}
 
-    async def _run_goa(
-        self, goal: str, context: dict[str, Any], run_id: str
-    ) -> dict[str, Any]:
+    async def _run_goa(self, goal: str, context: dict[str, Any], run_id: str) -> dict[str, Any]:
         # GoA = agents can invoke other agents. For deterministic behavior,
         # we run the graph once; if a node has outputs that other nodes
         # depend on, they run after. We just delegate to graph.
