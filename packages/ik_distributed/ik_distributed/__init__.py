@@ -23,7 +23,8 @@ import time
 import uuid
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Callable
+from typing import Any
+from collections.abc import Callable
 
 __version__ = "1.0.0"
 
@@ -83,7 +84,11 @@ class JobRecord:
     result: str = ""
 
     def is_terminal(self) -> bool:
-        return self.status in {JobStatus.COMPLETED.value, JobStatus.DEAD.value, JobStatus.CANCELLED.value}
+        return self.status in {
+            JobStatus.COMPLETED.value,
+            JobStatus.DEAD.value,
+            JobStatus.CANCELLED.value,
+        }
 
 
 class DistributedRuntime:
@@ -189,11 +194,23 @@ class DistributedRuntime:
             self._db.commit()
             return JobRecord(
                 **{
-                    **{f: getattr(rec, f) for f in (
-                        "id", "task", "tenant_id", "payload", "priority",
-                        "attempts", "max_attempts", "timeout_s",
-                        "created_at", "updated_at", "last_error", "result",
-                    )},
+                    **{
+                        f: getattr(rec, f)
+                        for f in (
+                            "id",
+                            "task",
+                            "tenant_id",
+                            "payload",
+                            "priority",
+                            "attempts",
+                            "max_attempts",
+                            "timeout_s",
+                            "created_at",
+                            "updated_at",
+                            "last_error",
+                            "result",
+                        )
+                    },
                     "status": JobStatus.LEASED.value,
                     "leased_by": worker_id,
                     "leased_until": lease_until,

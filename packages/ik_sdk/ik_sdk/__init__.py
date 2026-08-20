@@ -17,7 +17,8 @@ import urllib.parse
 import urllib.request
 import urllib.error
 from dataclasses import dataclass, field
-from typing import Any, Callable
+from typing import Any
+from collections.abc import Callable
 
 __version__ = "1.0.0"
 
@@ -90,7 +91,7 @@ class IndusClient:
             except urllib.error.HTTPError as e:
                 self._last_status = e.code
                 if e.code in (408, 429, 500, 502, 503, 504) and attempt < self.max_retries - 1:
-                    time.sleep(self.backoff_s * (2 ** attempt))
+                    time.sleep(self.backoff_s * (2**attempt))
                     last_err = e
                     continue
                 body_text = e.read().decode("utf-8", errors="replace")
@@ -102,7 +103,7 @@ class IndusClient:
                 ) from e
             except (urllib.error.URLError, TimeoutError) as e:
                 if attempt < self.max_retries - 1:
-                    time.sleep(self.backoff_s * (2 ** attempt))
+                    time.sleep(self.backoff_s * (2**attempt))
                     last_err = e
                     continue
                 raise SDKError(
@@ -212,10 +213,10 @@ def with_retry(fn: Callable, max_retries: int = 3, backoff_s: float = 0.1) -> An
     for attempt in range(max_retries):
         try:
             return fn()
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             last_err = e
             if attempt < max_retries - 1:
-                time.sleep(backoff_s * (2 ** attempt))
+                time.sleep(backoff_s * (2**attempt))
     if last_err is not None:
         raise last_err
     return None

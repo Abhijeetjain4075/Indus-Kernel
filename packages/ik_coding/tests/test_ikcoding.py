@@ -116,7 +116,9 @@ class TestPlanStrategy:
         assert any("test cases" in s for s in steps)
 
     def test_iterative(self):
-        task = CodeTask(language="python", instruction="x", mode=CodeMode.ITERATIVE.value, max_iterations=5)
+        task = CodeTask(
+            language="python", instruction="x", mode=CodeMode.ITERATIVE.value, max_iterations=5
+        )
         steps = plan_code_strategy(task)
         assert any("max=5" in s for s in steps)
 
@@ -175,7 +177,9 @@ class TestRunCodeSafely:
 class TestExecuteTask:
     def test_successful_python(self):
         task = CodeTask(language="python", instruction="compute factorial")
-        result = execute_coding_task(task, "def fact(n):\n    return 1 if n <= 1 else n * fact(n-1)\nprint(fact(5))")
+        result = execute_coding_task(
+            task, "def fact(n):\n    return 1 if n <= 1 else n * fact(n-1)\nprint(fact(5))"
+        )
         assert result.success
         assert "120" in result.output
         assert result.iterations == 1

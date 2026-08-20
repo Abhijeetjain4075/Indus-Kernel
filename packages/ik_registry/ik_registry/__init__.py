@@ -119,6 +119,7 @@ class Registry:
 
     def __init__(self) -> None:
         import threading
+
         self._lock = threading.RLock()
         # resource_id -> [Record, ...]  (ordered by created_at)
         self._records: dict[str, list[Record]] = {}
@@ -132,9 +133,7 @@ class Registry:
         with self._lock:
             existing = self._by_version.get((record.id, record.version))
             if existing is not None:
-                raise ValueError(
-                    f"version already exists: {record.id} v{record.version}"
-                )
+                raise ValueError(f"version already exists: {record.id} v{record.version}")
             self._records.setdefault(record.id, []).append(record)
             self._by_version[(record.id, record.version)] = record
             for tag in record.tags:
@@ -236,7 +235,7 @@ class Registry:
             )
             if target_idx is None:
                 return False
-            newer = versions[target_idx + 1:]
+            newer = versions[target_idx + 1 :]
             ok = True
             for v in newer:
                 if v.status == ResourceStatus.ACTIVE.value:

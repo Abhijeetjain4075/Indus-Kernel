@@ -23,7 +23,8 @@ import threading
 import time
 import uuid
 from dataclasses import dataclass, field
-from typing import Any, Awaitable, Callable
+from typing import Any
+from collections.abc import Awaitable, Callable
 
 __version__ = "1.0.0"
 
@@ -92,8 +93,7 @@ class Workflow:
         return [
             s
             for s in self.steps
-            if s.id not in completed
-            and all(d in completed for d in s.depends_on)
+            if s.id not in completed and all(d in completed for d in s.depends_on)
         ]
 
 
@@ -133,6 +133,7 @@ class WorkflowRegistry:
 
     def __init__(self) -> None:
         import threading
+
         self._lock = threading.RLock()
         self._workflows: dict[str, Workflow] = {}
         self._handlers: dict[str, Handler] = {}
@@ -276,7 +277,9 @@ class WorkflowExecutor:
                 run.steps[step.id].attempts = attempt
                 try:
                     out = await asyncio.wait_for(
-                        handler(**step.args, **inputs, _step_id=step.id, _step_outputs=step_outputs),
+                        handler(
+                            **step.args, **inputs, _step_id=step.id, _step_outputs=step_outputs
+                        ),
                         timeout=step.timeout_s,
                     )
                     run.steps[step.id].result = out

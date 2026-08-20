@@ -77,7 +77,7 @@ class APIError:
         }
 
     @classmethod
-    def from_exception(cls, exc: Exception, request_id: str = "") -> "APIError":
+    def from_exception(cls, exc: Exception, request_id: str = "") -> APIError:
         """Map a python exception to a canonical APIError."""
         from_exc_map = {
             ValueError: (ErrorCode.INVALID_ARGUMENT.value, 400),

@@ -1,0 +1,482 @@
+[
+  {
+    "name": "ik_agents",
+    "path": "packages/ik_agents",
+    "grade": "B",
+    "has_source": true,
+    "has_tests": true,
+    "source_files": 2,
+    "test_files": 1,
+    "test_count": 0,
+    "test_passed": 0,
+    "real_impl": true,
+    "notes": [
+      "imports OK"
+    ]
+  },
+  {
+    "name": "ik_api",
+    "path": "packages/ik_api",
+    "grade": "B",
+    "has_source": true,
+    "has_tests": true,
+    "source_files": 1,
+    "test_files": 1,
+    "test_count": 0,
+    "test_passed": 0,
+    "real_impl": true,
+    "notes": [
+      "imports OK"
+    ]
+  },
+  {
+    "name": "ik_automation",
+    "path": "packages/ik_automation",
+    "grade": "B",
+    "has_source": true,
+    "has_tests": true,
+    "source_files": 1,
+    "test_files": 1,
+    "test_count": 0,
+    "test_passed": 0,
+    "real_impl": true,
+    "notes": [
+      "imports OK"
+    ]
+  },
+  {
+    "name": "ik_coding",
+    "path": "packages/ik_coding",
+    "grade": "B",
+    "has_source": true,
+    "has_tests": true,
+    "source_files": 1,
+    "test_files": 1,
+    "test_count": 0,
+    "test_passed": 0,
+    "real_impl": true,
+    "notes": [
+      "imports OK"
+    ]
+  },
+  {
+    "name": "ik_config",
+    "path": "packages/ik_config",
+    "grade": "B",
+    "has_source": true,
+    "has_tests": true,
+    "source_files": 1,
+    "test_files": 1,
+    "test_count": 0,
+    "test_passed": 0,
+    "real_impl": true,
+    "notes": [
+      "imports OK"
+    ]
+  },
+  {
+    "name": "ik_context",
+    "path": "packages/ik_context",
+    "grade": "B",
+    "has_source": true,
+    "has_tests": true,
+    "source_files": 1,
+    "test_files": 1,
+    "test_count": 0,
+    "test_passed": 0,
+    "real_impl": true,
+    "notes": [
+      "imports OK"
+    ]
+  },
+  {
+    "name": "ik_distill",
+    "path": "packages/ik_distill",
+    "grade": "B",
+    "has_source": true,
+    "has_tests": true,
+    "source_files": 1,
+    "test_files": 1,
+    "test_count": 0,
+    "test_passed": 0,
+    "real_impl": true,
+    "notes": [
+      "imports OK"
+    ]
+  },
+  {
+    "name": "ik_distributed",
+    "path": "packages/ik_distributed",
+    "grade": "B",
+    "has_source": true,
+    "has_tests": true,
+    "source_files": 2,
+    "test_files": 1,
+    "test_count": 0,
+    "test_passed": 0,
+    "real_impl": true,
+    "notes": [
+      "imports OK"
+    ]
+  },
+  {
+    "name": "ik_eval",
+    "path": "packages/ik_eval",
+    "grade": "B",
+    "has_source": true,
+    "has_tests": true,
+    "source_files": 1,
+    "test_files": 1,
+    "test_count": 0,
+    "test_passed": 0,
+    "real_impl": true,
+    "notes": [
+      "imports OK"
+    ]
+  },
+  {
+    "name": "ik_eventbus",
+    "path": "packages/ik_eventbus",
+    "grade": "B",
+    "has_source": true,
+    "has_tests": true,
+    "source_files": 2,
+    "test_files": 1,
+    "test_count": 0,
+    "test_passed": 0,
+    "real_impl": true,
+    "notes": [
+      "imports OK"
+    ]
+  },
+  {
+    "name": "ik_gepa",
+    "path": "packages/ik_gepa",
+    "grade": "B",
+    "has_source": true,
+    "has_tests": true,
+    "source_files": 1,
+    "test_files": 1,
+    "test_count": 0,
+    "test_passed": 0,
+    "real_impl": true,
+    "notes": [
+      "imports OK"
+    ]
+  },
+  {
+    "name": "ik_improvement",
+    "path": "packages/ik_improvement",
+    "grade": "B",
+    "has_source": true,
+    "has_tests": true,
+    "source_files": 1,
+    "test_files": 1,
+    "test_count": 0,
+    "test_passed": 0,
+    "real_impl": true,
+    "notes": [
+      "imports OK"
+    ]
+  },
+  {
+    "name": "ik_indus_llm",
+    "path": "packages/ik_indus_llm",
+    "grade": "A",
+    "has_source": true,
+    "has_tests": true,
+    "source_files": 24,
+    "test_files": 1,
+    "test_count": 0,
+    "test_passed": 0,
+    "real_impl": true,
+    "notes": [
+      "imports OK"
+    ]
+  },
+  {
+    "name": "ik_kernel",
+    "path": "packages/ik_kernel",
+    "grade": "A",
+    "has_source": true,
+    "has_tests": true,
+    "source_files": 38,
+    "test_files": 1,
+    "test_count": 0,
+    "test_passed": 0,
+    "real_impl": true,
+    "notes": [
+      "imports OK"
+    ]
+  },
+  {
+    "name": "ik_memory",
+    "path": "packages/ik_memory",
+    "grade": "A",
+    "has_source": true,
+    "has_tests": true,
+    "source_files": 9,
+    "test_files": 1,
+    "test_count": 0,
+    "test_passed": 0,
+    "real_impl": true,
+    "notes": [
+      "imports OK"
+    ]
+  },
+  {
+    "name": "ik_memory_os",
+    "path": "packages/ik_memory_os",
+    "grade": "B",
+    "has_source": true,
+    "has_tests": true,
+    "source_files": 2,
+    "test_files": 1,
+    "test_count": 0,
+    "test_passed": 0,
+    "real_impl": true,
+    "notes": [
+      "imports OK"
+    ]
+  },
+  {
+    "name": "ik_planning",
+    "path": "packages/ik_planning",
+    "grade": "B",
+    "has_source": true,
+    "has_tests": true,
+    "source_files": 1,
+    "test_files": 1,
+    "test_count": 0,
+    "test_passed": 0,
+    "real_impl": true,
+    "notes": [
+      "imports OK"
+    ]
+  },
+  {
+    "name": "ik_protocols",
+    "path": "packages/ik_protocols",
+    "grade": "B",
+    "has_source": true,
+    "has_tests": true,
+    "source_files": 1,
+    "test_files": 1,
+    "test_count": 0,
+    "test_passed": 0,
+    "real_impl": true,
+    "notes": [
+      "imports OK"
+    ]
+  },
+  {
+    "name": "ik_reasoning",
+    "path": "packages/ik_reasoning",
+    "grade": "A",
+    "has_source": true,
+    "has_tests": true,
+    "source_files": 17,
+    "test_files": 1,
+    "test_count": 0,
+    "test_passed": 0,
+    "real_impl": true,
+    "notes": [
+      "imports OK"
+    ]
+  },
+  {
+    "name": "ik_registry",
+    "path": "packages/ik_registry",
+    "grade": "B",
+    "has_source": true,
+    "has_tests": true,
+    "source_files": 1,
+    "test_files": 1,
+    "test_count": 0,
+    "test_passed": 0,
+    "real_impl": true,
+    "notes": [
+      "imports OK"
+    ]
+  },
+  {
+    "name": "ik_research",
+    "path": "packages/ik_research",
+    "grade": "B",
+    "has_source": true,
+    "has_tests": true,
+    "source_files": 1,
+    "test_files": 1,
+    "test_count": 0,
+    "test_passed": 0,
+    "real_impl": true,
+    "notes": [
+      "imports OK"
+    ]
+  },
+  {
+    "name": "ik_retrieval",
+    "path": "packages/ik_retrieval",
+    "grade": "A",
+    "has_source": true,
+    "has_tests": true,
+    "source_files": 13,
+    "test_files": 1,
+    "test_count": 0,
+    "test_passed": 0,
+    "real_impl": true,
+    "notes": [
+      "imports OK"
+    ]
+  },
+  {
+    "name": "ik_router",
+    "path": "packages/ik_router",
+    "grade": "A",
+    "has_source": true,
+    "has_tests": true,
+    "source_files": 8,
+    "test_files": 1,
+    "test_count": 0,
+    "test_passed": 0,
+    "real_impl": true,
+    "notes": [
+      "imports OK"
+    ]
+  },
+  {
+    "name": "ik_sandbox",
+    "path": "packages/ik_sandbox",
+    "grade": "B",
+    "has_source": true,
+    "has_tests": true,
+    "source_files": 2,
+    "test_files": 1,
+    "test_count": 0,
+    "test_passed": 0,
+    "real_impl": true,
+    "notes": [
+      "imports OK"
+    ]
+  },
+  {
+    "name": "ik_sdk",
+    "path": "packages/ik_sdk",
+    "grade": "B",
+    "has_source": true,
+    "has_tests": true,
+    "source_files": 1,
+    "test_files": 1,
+    "test_count": 0,
+    "test_passed": 0,
+    "real_impl": true,
+    "notes": [
+      "imports OK"
+    ]
+  },
+  {
+    "name": "ik_security",
+    "path": "packages/ik_security",
+    "grade": "B",
+    "has_source": true,
+    "has_tests": true,
+    "source_files": 1,
+    "test_files": 1,
+    "test_count": 0,
+    "test_passed": 0,
+    "real_impl": true,
+    "notes": [
+      "imports OK"
+    ]
+  },
+  {
+    "name": "ik_state",
+    "path": "packages/ik_state",
+    "grade": "B",
+    "has_source": true,
+    "has_tests": true,
+    "source_files": 1,
+    "test_files": 1,
+    "test_count": 0,
+    "test_passed": 0,
+    "real_impl": true,
+    "notes": [
+      "imports OK"
+    ]
+  },
+  {
+    "name": "ik_telemetry",
+    "path": "packages/ik_telemetry",
+    "grade": "B",
+    "has_source": true,
+    "has_tests": true,
+    "source_files": 1,
+    "test_files": 1,
+    "test_count": 0,
+    "test_passed": 0,
+    "real_impl": true,
+    "notes": [
+      "imports OK"
+    ]
+  },
+  {
+    "name": "ik_tools",
+    "path": "packages/ik_tools",
+    "grade": "B",
+    "has_source": true,
+    "has_tests": true,
+    "source_files": 1,
+    "test_files": 1,
+    "test_count": 0,
+    "test_passed": 0,
+    "real_impl": true,
+    "notes": [
+      "imports OK"
+    ]
+  },
+  {
+    "name": "ik_ttc",
+    "path": "packages/ik_ttc",
+    "grade": "B",
+    "has_source": true,
+    "has_tests": true,
+    "source_files": 1,
+    "test_files": 1,
+    "test_count": 0,
+    "test_passed": 0,
+    "real_impl": true,
+    "notes": [
+      "imports OK"
+    ]
+  },
+  {
+    "name": "ik_wasm",
+    "path": "packages/ik_wasm",
+    "grade": "B",
+    "has_source": true,
+    "has_tests": true,
+    "source_files": 1,
+    "test_files": 1,
+    "test_count": 0,
+    "test_passed": 0,
+    "real_impl": true,
+    "notes": [
+      "imports OK"
+    ]
+  },
+  {
+    "name": "ik_workflow",
+    "path": "packages/ik_workflow",
+    "grade": "B",
+    "has_source": true,
+    "has_tests": true,
+    "source_files": 2,
+    "test_files": 1,
+    "test_count": 0,
+    "test_passed": 0,
+    "real_impl": true,
+    "notes": [
+      "imports OK"
+    ]
+  }
+]

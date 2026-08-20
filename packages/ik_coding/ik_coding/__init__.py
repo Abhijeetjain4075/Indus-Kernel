@@ -74,7 +74,7 @@ class CodeResult:
     iterations: int = 1
     tokens_used: int = 0
     duration_s: float = 0.0
-    test_results: list["TestRun"] = field(default_factory=list)
+    test_results: list[TestRun] = field(default_factory=list)
 
 
 @dataclass
@@ -99,15 +99,13 @@ def validate_code_request(task: CodeTask) -> None:
         Language(task.language)
     except ValueError as exc:
         raise CodingError(
-            f"unsupported language: {task.language}; "
-            f"supported: {[l.value for l in Language]}"
+            f"unsupported language: {task.language}; supported: {[l.value for l in Language]}"
         ) from exc
     try:
         CodeMode(task.mode)
     except ValueError as exc:
         raise CodingError(
-            f"unsupported mode: {task.mode}; "
-            f"supported: {[m.value for m in CodeMode]}"
+            f"unsupported mode: {task.mode}; supported: {[m.value for m in CodeMode]}"
         ) from exc
     if task.timeout_s < 1 or task.timeout_s > 300:
         raise CodingError("timeout_s must be 1..300")
@@ -136,9 +134,7 @@ def looks_like_python(code: str) -> bool:
     if not code.strip():
         return False
     # No semicolon at end of lines (common in JS/Go/Rust)
-    has_python_syntax = any(
-        kw in code for kw in ("def ", "class ", "import ", "from ", "    ")
-    )
+    has_python_syntax = any(kw in code for kw in ("def ", "class ", "import ", "from ", "    "))
     return has_python_syntax or "\n" not in code  # single-line is ambiguous
 
 

@@ -30,13 +30,13 @@ class _TestHandler(BaseHTTPRequestHandler):
         "last_body": b"",
     }
 
-    def log_message(self, format, *args):  # noqa: A002
+    def log_message(self, format, *args):
         pass  # silence
 
-    def do_GET(self) -> None:  # noqa: N802
+    def do_GET(self) -> None:
         self._handle("GET")
 
-    def do_POST(self) -> None:  # noqa: N802
+    def do_POST(self) -> None:
         self._handle("POST")
 
     def _handle(self, method: str) -> None:
@@ -149,9 +149,7 @@ class TestRetries:
         _TestHandler.state["status"] = 200
         _TestHandler.state["body"] = b'{"ok": true}'
         _TestHandler.state["fail_count"] = 2
-        c = IndusClient(
-            base_url=http_server, max_retries=3, backoff_s=0.01, timeout=2
-        )
+        c = IndusClient(base_url=http_server, max_retries=3, backoff_s=0.01, timeout=2)
         result = c.health()
         assert result["ok"] is True
         assert _TestHandler.state["request_count"] == 3  # 2 fails + 1 success
@@ -159,9 +157,7 @@ class TestRetries:
     def test_gives_up_after_max_retries(self, http_server):
         _TestHandler.state["fail_count"] = 5
         _TestHandler.state["status"] = 503
-        c = IndusClient(
-            base_url=http_server, max_retries=2, backoff_s=0.01, timeout=2
-        )
+        c = IndusClient(base_url=http_server, max_retries=2, backoff_s=0.01, timeout=2)
         with pytest.raises(SDKError):
             c.health()
 
@@ -224,6 +220,7 @@ class TestMakeClient:
         c = _Client.make_client if hasattr(_Client, "make_client") else None
         # We provide make_client in the module
         from ik_sdk import make_client
+
         c = make_client(base_url="http://x", api_key="k")
         assert c.base_url == "http://x"
         assert c.api_key == "k"

@@ -320,6 +320,15 @@ ignore = [
     "N803",  # invalid-argument-name (M11 contract parameter names)
     "PTH",  # os.path is still valid Python; pathlib is one option
     "SIM105",# try/except/pass is more readable than contextlib.suppress
+    "UP031", # % formatting is fine
+    "S324",  # sha1 in non-security contexts (content-addressed ids)
+    "C408",  # dict() vs {} is style
+    "ASYNC230", # blocking I/O in async is sometimes intentional
+    "UP037", # quoted annotations are fine
+    "ASYNC240", # os.path in async is fine for our subprocess model
+    "B018",   # useless expression as docstring marker
+    "S103",   # chmod 0o755 for /bin/sh scripts is fine
+    "S310",   # urlopen with explicit http(s) is fine
 ]
 
 [tool.ruff.lint.per-file-ignores]

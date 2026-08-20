@@ -220,9 +220,7 @@ class Tracer:
                 except Exception:
                     pass
 
-    def counter(
-        self, name: str, value: float = 1.0, labels: dict[str, str] | None = None
-    ) -> None:
+    def counter(self, name: str, value: float = 1.0, labels: dict[str, str] | None = None) -> None:
         self.collector.record_metric(
             Metric(
                 name=name,
@@ -233,9 +231,7 @@ class Tracer:
             )
         )
 
-    def gauge(
-        self, name: str, value: float, labels: dict[str, str] | None = None
-    ) -> None:
+    def gauge(self, name: str, value: float, labels: dict[str, str] | None = None) -> None:
         self.collector.record_metric(
             Metric(
                 name=name,
@@ -246,9 +242,7 @@ class Tracer:
             )
         )
 
-    def histogram(
-        self, name: str, value: float, labels: dict[str, str] | None = None
-    ) -> None:
+    def histogram(self, name: str, value: float, labels: dict[str, str] | None = None) -> None:
         self.collector.record_metric(
             Metric(
                 name=name,

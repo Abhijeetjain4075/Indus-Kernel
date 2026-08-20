@@ -138,7 +138,9 @@ class SQLiteBackend(MemoryBackend):
             )
             """
         )
-        self._db.execute("CREATE INDEX IF NOT EXISTS idx_tenant_user ON memories(tenant_id, user_id)")
+        self._db.execute(
+            "CREATE INDEX IF NOT EXISTS idx_tenant_user ON memories(tenant_id, user_id)"
+        )
         self._db.execute("CREATE INDEX IF NOT EXISTS idx_expires ON memories(expires_at)")
         self._db.commit()
 

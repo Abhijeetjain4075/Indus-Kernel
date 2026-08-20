@@ -46,7 +46,14 @@ class TestSpan:
 
 class TestLocalCollector:
     def test_record_span(self, collector):
-        s = Span(name="x", trace_id="t", span_id="s", parent_span_id=None, service="svc", started_at=time.time())
+        s = Span(
+            name="x",
+            trace_id="t",
+            span_id="s",
+            parent_span_id=None,
+            service="svc",
+            started_at=time.time(),
+        )
         collector.record_span(s)
         assert len(collector.get_spans()) == 1
 
@@ -62,7 +69,13 @@ class TestLocalCollector:
         assert collector.gauge_value("temp") == 42
 
     def test_counter_with_labels(self, collector):
-        m = Metric(name="hits", value=1, timestamp=time.time(), labels={"route": "/a"}, metric_type="counter")
+        m = Metric(
+            name="hits",
+            value=1,
+            timestamp=time.time(),
+            labels={"route": "/a"},
+            metric_type="counter",
+        )
         collector.record_metric(m)
         assert collector.counter_value("hits", {"route": "/a"}) == 1
         assert collector.counter_value("hits", {"route": "/b"}) == 0
@@ -81,7 +94,14 @@ class TestLocalCollector:
         # Record more than the cap (10000). The collector should trim to <= 10000.
         for i in range(10050):
             collector.record_span(
-                Span(name="x", trace_id="t", span_id=str(i), parent_span_id=None, service="s", started_at=time.time())
+                Span(
+                    name="x",
+                    trace_id="t",
+                    span_id=str(i),
+                    parent_span_id=None,
+                    service="s",
+                    started_at=time.time(),
+                )
             )
         spans = collector.get_spans()
         assert len(spans) <= 10000
@@ -89,7 +109,9 @@ class TestLocalCollector:
         assert int(spans[-1].span_id) >= 10049 - 10000
 
     def test_summary(self, collector):
-        collector.record_metric(Metric(name="a", value=1, timestamp=time.time(), metric_type="counter"))
+        collector.record_metric(
+            Metric(name="a", value=1, timestamp=time.time(), metric_type="counter")
+        )
         s = collector.summary()
         assert s["counters"] == 1
 
@@ -108,9 +130,8 @@ class TestTracer:
 
     def test_error_span(self, collector):
         t = Tracer(service="svc", collector=collector)
-        with pytest.raises(ValueError):
-            with t.start_span("op"):
-                raise ValueError("boom")
+        with pytest.raises(ValueError), t.start_span("op"):
+            raise ValueError("boom")
         spans = collector.get_spans()
         assert len(spans) == 1
         assert spans[0].status == "error"
@@ -167,10 +188,9 @@ class TestStructuredLogger:
 
     def test_with_trace_id(self, caplog):
         logger = StructuredLogger("test", level="INFO")
-        with caplog.at_level(logging.INFO, logger="test"):
-            with with_trace_id("trace-1"):
-                assert current_trace_id() == "trace-1"
-                logger.info("inside")
+        with caplog.at_level(logging.INFO, logger="test"), with_trace_id("trace-1"):
+            assert current_trace_id() == "trace-1"
+            logger.info("inside")
         assert any("trace-1" in r.message for r in caplog.records)
         assert current_trace_id() is None
 

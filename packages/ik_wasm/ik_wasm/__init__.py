@@ -218,7 +218,7 @@ def _install_stdout(store, instance) -> None:
     now this is a no-op stub — the real implementation is
     backend-specific and lives in a separate adapter.
     """
-    return None
+    return
 
 
 def _install_stderr(store, instance) -> None:

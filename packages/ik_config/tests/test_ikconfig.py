@@ -108,11 +108,7 @@ class TestFromYaml:
     def test_load_yaml(self, tmp_path):
         yaml_path = tmp_path / "config.yaml"
         yaml_path.write_text(
-            "environment: staging\n"
-            "api_port: 9000\n"
-            "llm_fallback_providers:\n"
-            "  - indus\n"
-            "  - openai\n"
+            "environment: staging\napi_port: 9000\nllm_fallback_providers:\n  - indus\n  - openai\n"
         )
         s = from_yaml(str(yaml_path))
         assert s.environment == "staging"

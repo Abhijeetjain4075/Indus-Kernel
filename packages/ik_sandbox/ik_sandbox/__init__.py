@@ -102,7 +102,7 @@ class SandboxBackend:
         audit_id: str = "",
         tenant_id: str = "default",
         user_id: str = "anonymous",
-    ) -> "SandboxResult":
+    ) -> SandboxResult:
         raise NotImplementedError
 
 
@@ -137,7 +137,7 @@ class SubprocessBackend(SandboxBackend):
         audit_id: str = "",
         tenant_id: str = "default",
         user_id: str = "anonymous",
-    ) -> "SandboxResult":
+    ) -> SandboxResult:
         if not command:
             raise SandboxViolation("empty command")
         audit_id = audit_id or str(uuid.uuid4())
@@ -175,9 +175,7 @@ class SubprocessBackend(SandboxBackend):
             except asyncio.TimeoutError as e:
                 proc.kill()
                 await proc.wait()
-                raise SandboxViolation(
-                    f"execution exceeded {policy.timeout_s}s timeout"
-                ) from e
+                raise SandboxViolation(f"execution exceeded {policy.timeout_s}s timeout") from e
             duration = time.time() - started
             stdout_b = stdout_b[: policy.max_output_bytes]
             stderr_b = stderr_b[: policy.max_output_bytes]

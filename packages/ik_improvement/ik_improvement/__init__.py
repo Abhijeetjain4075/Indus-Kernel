@@ -113,6 +113,7 @@ class ProposalStore:
 
     def __init__(self) -> None:
         import threading
+
         self._lock = threading.Lock()
         self._proposals: dict[str, ImprovementProposal] = {}
         self._status: dict[str, ProposalStatus] = {}
@@ -149,7 +150,10 @@ class ProposalStore:
         with self._lock:
             if proposal_id not in self._proposals:
                 return False
-            if self._status.get(proposal_id) not in {ProposalStatus.TRIAGED, ProposalStatus.PRIORITIZED}:
+            if self._status.get(proposal_id) not in {
+                ProposalStatus.TRIAGED,
+                ProposalStatus.PRIORITIZED,
+            }:
                 return False
             self._scores[proposal_id] = score
             self._status[proposal_id] = ProposalStatus.PRIORITIZED

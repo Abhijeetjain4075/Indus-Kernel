@@ -240,6 +240,7 @@ class TestExecutor:
     async def test_concurrent_independent_steps(self):
         r = WorkflowRegistry()
         import time
+
         started = []
 
         async def h(**_):

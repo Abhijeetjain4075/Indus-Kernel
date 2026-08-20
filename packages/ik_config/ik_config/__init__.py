@@ -102,7 +102,7 @@ class ConfigSnapshot:
     telemetry_enabled: bool = True
     extras: dict[str, Any] = field(default_factory=dict)
 
-    def overlay(self, **values: Any) -> "ConfigSnapshot":
+    def overlay(self, **values: Any) -> ConfigSnapshot:
         """Return a new snapshot with the given fields overridden.
 
         Unknown fields raise ValueError. Use `extras` for ad-hoc
@@ -114,7 +114,7 @@ class ConfigSnapshot:
             raise ValueError(f"unknown config fields: {sorted(unknown)}")
         return replace(self, **values)
 
-    def with_extras(self, **values: Any) -> "ConfigSnapshot":
+    def with_extras(self, **values: Any) -> ConfigSnapshot:
         """Merge values into the `extras` dict (shallow merge)."""
         merged = {**self.extras, **values}
         return replace(self, extras=merged)
@@ -175,7 +175,9 @@ def from_yaml(path: str | Path) -> ConfigSnapshot:
     # Coerce tuples
     if "llm_fallback_providers" in data and isinstance(data["llm_fallback_providers"], list):
         data["llm_fallback_providers"] = tuple(data["llm_fallback_providers"])
-    snap = ConfigSnapshot(**{k: v for k, v in data.items() if k in {f.name for f in fields(ConfigSnapshot)}})
+    snap = ConfigSnapshot(
+        **{k: v for k, v in data.items() if k in {f.name for f in fields(ConfigSnapshot)}}
+    )
     snap.validate()
     return snap
 
