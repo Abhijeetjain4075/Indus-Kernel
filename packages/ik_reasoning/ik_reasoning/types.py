@@ -64,3 +64,7 @@ class ReasoningResult(BaseModel):
     total_tokens: int = 0
     total_cost_cents: int = 0
     rationale: str = ""
+    # 1.0 if the result was verified (e.g. by a self-consistency check or
+    # an external verifier), 0.5 otherwise. Status signal — not probability.
+    confidence: float = 0.5
+    verified: bool = False

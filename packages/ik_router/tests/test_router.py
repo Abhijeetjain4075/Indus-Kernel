@@ -86,12 +86,16 @@ class TestConfiguration:
 
 
 class TestPolicyEngine:
-    def test_selects_explicit_hint(self):
+    def test_selects_explicit_hint(self, monkeypatch):
+        # Need a configured provider whose model id contains the hint
+        monkeypatch.setenv("OPENAI_API_KEY", "test-key")
         pe = PolicyEngine()
         c = pe.select("gpt-4o-mini", set())
         assert c.model_id == "openai/gpt-4o-mini"
 
-    def test_selects_by_capability(self):
+    def test_selects_by_capability(self, monkeypatch):
+        # Need a configured provider with json-mode (nvidia_nim or openai).
+        monkeypatch.setenv("NVIDIA_NIM_API_KEY", "test-key")
         pe = PolicyEngine()
         c = pe.select(None, {"json-mode"})
         assert "json-mode" in c.capabilities
@@ -121,10 +125,22 @@ class TestPolicyEngine:
         c = pe.select(None, {"code"})
         assert c.model_id == "cheap"
 
-    def test_indus_local_registered(self):
-        pe = PolicyEngine()
-        ids = {c.model_id for c in pe.candidates}
-        assert "indus/indus-tiny" in ids
+    def test_indus_local_registered(self, monkeypatch):
+        # Indus local is only in the candidate list when its checkpoint
+        # is present. To make this test deterministic, we provide a
+        # sentinel checkpoint path.
+        import tempfile
+        import os
+
+        with tempfile.NamedTemporaryFile(suffix=".pt", delete=False) as f:
+            tmp = f.name
+        try:
+            monkeypatch.setenv("INDUS_LLM_CHECKPOINT", tmp)
+            pe = PolicyEngine()
+            ids = {c.model_id for c in pe.candidates}
+            assert "indus/indus-tiny" in ids
+        finally:
+            os.unlink(tmp)
 
     def test_all_down_raises(self):
         pe = PolicyEngine()

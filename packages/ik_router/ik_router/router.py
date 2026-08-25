@@ -100,6 +100,9 @@ class LLMRouter:
             "DEEPINFRA_API_KEY",
             "OPENROUTER_API_KEY",
             "LITELLM_API_KEY",
+            # NVIDIA NIM via build.nvidia.com — uses nvapi-* keys
+            "NVIDIA_NIM_API_KEY",
+            "INDUS_LLM_API_KEY",
         ]
         return any(os.environ.get(k) for k in keys)
 
@@ -131,6 +134,18 @@ class LLMRouter:
     # ------------------------------------------------------------------
     async def complete(self, req: LLMRequest) -> LLMResponse:
         """Run a completion. Real backend call (no mocks)."""
+        # Validate the request up-front. Failing early prevents noisy errors
+        # from downstream providers (e.g. Anthropic's "non-system message"
+        # complaint) and surfaces a clear, actionable error to the caller.
+        if not req.messages:
+            raise ValueError("LLMRequest.messages must not be empty")
+        if not any(
+            m.role != MessageRole.SYSTEM and (m.content or "").strip() for m in req.messages
+        ):
+            raise ValueError(
+                "LLMRequest.messages must contain at least one non-system message "
+                "with non-empty content"
+            )
         if not self.is_configured():
             raise ConfigurationError(
                 "No LLM backend available. Set one of: OPENAI_API_KEY, "
@@ -217,8 +232,61 @@ class LLMRouter:
             kwargs["response_format"] = req.response_format.model_dump(exclude_none=True)
         if req.stream:
             raise NotImplementedError("streaming not yet supported; use ik_streaming (M4)")
+        # Special handling for NVIDIA NIM: rewrite the model name so LiteLLM
+        # knows to use the nvidia_nim provider, and inject the api_key/base_url.
+        if model.startswith("nvidia/") or self._is_nim_model(model):
+            nvidia_model = self._resolve_nim_model(model)
+            kwargs["model"] = f"nvidia_nim/{nvidia_model}"
+            kwargs["api_key"] = os.environ.get(
+                "NVIDIA_NIM_API_KEY",
+                os.environ.get("INDUS_LLM_API_KEY", ""),
+            )
+            base = os.environ.get(
+                "NVIDIA_NIM_API_BASE",
+                os.environ.get(
+                    "INDUS_LLM_BASE_URL",
+                    "https://integrate.api.nvidia.com/v1",
+                ),
+            )
+            kwargs["api_base"] = base
+        # If api_key was set in the env, let LiteLLM pick it up
+        if "api_key" not in kwargs:
+            for env_key in (
+                "OPENAI_API_KEY",
+                "ANTHROPIC_API_KEY",
+                "GOOGLE_API_KEY",
+                "NVIDIA_NIM_API_KEY",
+                "INDUS_LLM_API_KEY",
+            ):
+                v = os.environ.get(env_key)
+                if v:
+                    kwargs["api_key"] = v
+                    break
         resp = await self._litellm.acompletion(**kwargs)
         return self._litellm_to_response(resp, model)
+
+    def _is_nim_model(self, model: str) -> bool:
+        """Return True if `model` is a known NVIDIA NIM model identifier."""
+        if not model:
+            return False
+        if "/" in model and model.split("/", 1)[0] == "nvidia":
+            return True
+        # Common Nemotron / NVIDIA-only model names
+        nim_only_prefixes = ("nemotron-", "llama-3.1-nemotron", "llama-3.3-nemotron")
+        return any(model.startswith(p) for p in nim_only_prefixes)
+
+    def _resolve_nim_model(self, model: str) -> str:
+        """Translate a model hint into NVIDIA NIM canonical form.
+
+        Accepts:
+          - "nvidia/nemotron-3-ultra-550b-a55b" → "nvidia/nemotron-3-ultra-550b-a55b"
+          - "nemotron-3-ultra-550b-a55b"        → "nvidia/nemotron-3-ultra-550b-a55b"
+        LiteLLM expects the form "nvidia_nim/<vendor/model-name>", so we
+        keep the full nvidia/... prefix here.
+        """
+        if model.startswith("nvidia/"):
+            return model
+        return f"nvidia/{model}"
 
     async def _call_indus_local(self, req: LLMRequest, model: str) -> LLMResponse:
         """Call the local Indus model (real, no mock).

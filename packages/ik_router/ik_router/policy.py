@@ -49,54 +49,124 @@ class PolicyEngine:
         Model IDs are in LiteLLM canonical form: "provider/model-name".
         This way they match the fallback chain entries exactly.
         """
-        return [
-            # Native Indus (local, free, always available when checkpoint installed)
-            ModelCandidate(
-                model_id="indus/indus-tiny",
-                provider="indus-local",
-                capabilities={"text"},
-                cost_per_1k_input_cents=0,
-                cost_per_1k_output_cents=0,
-                context_length=2048,
-                priority=1,  # lowest priority — only used when external is down or explicitly requested
-            ),
-            ModelCandidate(
-                model_id="openai/gpt-4o-mini",
-                provider="openai",
-                capabilities={"text", "json-mode", "tool-use", "vision"},
-                cost_per_1k_input_cents=15,
-                cost_per_1k_output_cents=60,
-                context_length=128000,
-                priority=10,
-            ),
-            ModelCandidate(
-                model_id="openai/gpt-4o",
-                provider="openai",
-                capabilities={"text", "json-mode", "tool-use", "vision"},
-                cost_per_1k_input_cents=250,
-                cost_per_1k_output_cents=1000,
-                context_length=128000,
-                priority=5,
-            ),
-            ModelCandidate(
-                model_id="anthropic/claude-3-5-sonnet",
-                provider="anthropic",
-                capabilities={"text", "json-mode", "tool-use", "vision"},
-                cost_per_1k_input_cents=300,
-                cost_per_1k_output_cents=1500,
-                context_length=200000,
-                priority=3,
-            ),
-            ModelCandidate(
-                model_id="anthropic/claude-3-haiku",
-                provider="anthropic",
-                capabilities={"text", "json-mode", "tool-use"},
-                cost_per_1k_input_cents=25,
-                cost_per_1k_output_cents=125,
-                context_length=200000,
-                priority=8,
-            ),
-        ]
+        import os
+
+        candidates: list[ModelCandidate] = []
+        # Optional: register the local Indus checkpoint if it's installed
+        # (opt-in via INDUS_LLM_CHECKPOINT or the default artifact path).
+        if os.environ.get("INDUS_LLM_CHECKPOINT") or self._default_indus_path():
+            candidates.append(
+                ModelCandidate(
+                    model_id="indus/indus-tiny",
+                    provider="indus-local",
+                    capabilities={"text"},
+                    cost_per_1k_input_cents=0,
+                    cost_per_1k_output_cents=0,
+                    context_length=2048,
+                    priority=1,
+                )
+            )
+        # NVIDIA NIM (build.nvidia.com). Activated when NVIDIA_NIM_API_KEY is set.
+        if os.environ.get("NVIDIA_NIM_API_KEY") or os.environ.get("INDUS_LLM_API_KEY"):
+            candidates.extend(
+                [
+                    ModelCandidate(
+                        model_id="nvidia/nemotron-3-ultra-550b-a55b",
+                        provider="nvidia_nim",
+                        capabilities={"text", "json-mode", "tool-use", "long-context"},
+                        cost_per_1k_input_cents=0,  # NIM free tier; update with real pricing when billing is wired in
+                        cost_per_1k_output_cents=0,
+                        context_length=1_000_000,
+                        priority=2,
+                    ),
+                    ModelCandidate(
+                        model_id="nvidia/nemotron-3-super-120b-a12b",
+                        provider="nvidia_nim",
+                        capabilities={"text", "json-mode", "tool-use", "long-context"},
+                        cost_per_1k_input_cents=0,
+                        cost_per_1k_output_cents=0,
+                        context_length=1_000_000,
+                        priority=3,
+                    ),
+                    ModelCandidate(
+                        model_id="nvidia/llama-3.1-nemotron-70b-instruct",
+                        provider="nvidia_nim",
+                        capabilities={"text", "json-mode", "tool-use"},
+                        cost_per_1k_input_cents=0,
+                        cost_per_1k_output_cents=0,
+                        context_length=131072,
+                        priority=4,
+                    ),
+                ]
+            )
+        if os.environ.get("OPENAI_API_KEY"):
+            candidates.extend(
+                [
+                    ModelCandidate(
+                        model_id="openai/gpt-4o-mini",
+                        provider="openai",
+                        capabilities={"text", "json-mode", "tool-use", "vision"},
+                        cost_per_1k_input_cents=15,
+                        cost_per_1k_output_cents=60,
+                        context_length=128000,
+                        priority=10,
+                    ),
+                    ModelCandidate(
+                        model_id="openai/gpt-4o",
+                        provider="openai",
+                        capabilities={"text", "json-mode", "tool-use", "vision"},
+                        cost_per_1k_input_cents=250,
+                        cost_per_1k_output_cents=1000,
+                        context_length=128000,
+                        priority=5,
+                    ),
+                ]
+            )
+        if os.environ.get("ANTHROPIC_API_KEY"):
+            candidates.extend(
+                [
+                    ModelCandidate(
+                        model_id="anthropic/claude-3-5-sonnet",
+                        provider="anthropic",
+                        capabilities={"text", "json-mode", "tool-use", "vision"},
+                        cost_per_1k_input_cents=300,
+                        cost_per_1k_output_cents=1500,
+                        context_length=200000,
+                        priority=3,
+                    ),
+                    ModelCandidate(
+                        model_id="anthropic/claude-3-haiku",
+                        provider="anthropic",
+                        capabilities={"text", "json-mode", "tool-use"},
+                        cost_per_1k_input_cents=25,
+                        cost_per_1k_output_cents=125,
+                        context_length=200000,
+                        priority=8,
+                    ),
+                ]
+            )
+        if not candidates:
+            # No external providers configured; the router will surface
+            # a ConfigurationError when called. We do NOT add a default
+            # local fallback — NIM is the production default.
+            return candidates
+        return candidates
+
+    def _default_indus_path(self) -> str | None:
+        """Return the default Indus checkpoint path if it exists on disk."""
+        import os
+        from pathlib import Path
+
+        default = (
+            Path(__file__).parent.parent
+            / "ik_indus_llm"
+            / "ik_indus_llm"
+            / "artifacts"
+            / "checkpoints"
+            / "pretrain"
+            / "indus_tiny_v0.3.0.pt"
+        )
+        return str(default) if default.exists() else None
 
     def select(
         self,
